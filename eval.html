@@ -399,6 +399,30 @@
             margin-right: 10px; /* Espacement entre le radio et le texte */
         }
 
+        /* Image Preview Container */
+        .image-preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            border: 1px dashed var(--light-gray);
+            padding: 10px;
+            min-height: 50px; /* To make it visible even with no images */
+            align-items: center;
+            justify-content: center;
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        .image-preview-container img {
+            max-width: 120px;
+            max-height: 100px;
+            width: auto; /* Allow natural aspect ratio */
+            height: auto; /* Allow natural aspect ratio */
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            object-fit: cover; /* Crop to fit container */
+        }
 
         #vin-decoder-results {
             margin-top: 20px;
@@ -702,7 +726,7 @@
                                     <span>Cliquez ou glissez-déposez les photos de l'extérieur ici</span>
                                     <small>Formats acceptés: JPG, PNG</small>
                                 </label>
-                                <input type="file" id="photoExterieur" class="photo-input" data-category="Extérieur" multiple style="display: none;">
+                                <input type="file" id="photoExterieur" class="photo-input" data-category="Exterieur" multiple style="display: none;">
                                 <div id="exterieur-preview" class="image-preview-container"></div>
                             </div>
                         </div>
@@ -748,7 +772,7 @@
                                     <span>Cliquez ou glissez-déposez les photos de l'intérieur ici</span>
                                     <small>Formats acceptés: JPG, PNG</small>
                                 </label>
-                                <input type="file" id="photoInterieur" class="photo-input" data-category="Intérieur" multiple style="display: none;">
+                                <input type="file" id="photoInterieur" class="photo-input" data-category="Interieur" multiple style="display: none;">
                                 <div id="interieur-preview" class="image-preview-container"></div>
                             </div>
                         </div>
@@ -910,12 +934,14 @@
                 decodedCarburant.textContent = carburantApiValue || 'N/A';
                 decodedTransmission.textContent = transmissionApiValue || 'N/A';
 
+                // Attempt to pre-fill form fields
                 if (marque !== 'Non trouvée' && marque !== 'Erreur VIN') {
                     const marqueSelect = document.getElementById('marque');
                     let foundMarque = false;
                     const cleanMarque = marque.toLowerCase().replace(/[^a-z0-9]/g, '');
 
                     for (let i = 0; i < marqueSelect.options.length; i++) {
+                        // Compare cleaned values to handle slight variations
                         if (marqueSelect.options[i].value.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanMarque) {
                             marqueSelect.value = marqueSelect.options[i].value;
                             foundMarque = true;
@@ -923,7 +949,7 @@
                         }
                     }
                     if (!foundMarque) {
-                        marqueSelect.value = "Autre";
+                        marqueSelect.value = "Autre"; // Select "Autre" if no direct match
                     }
                 }
 
@@ -948,7 +974,7 @@
                     } else if (cleanCarburantApi.includes('electric') || cleanCarburantApi.includes('ev')) {
                         carburantSelect.value = 'Électrique';
                     } else {
-                        carburantSelect.value = '';
+                        carburantSelect.value = ''; // Leave blank if no clear match
                     }
                 }
 
@@ -961,7 +987,7 @@
                     } else if (cleanTransmissionApi.includes('manual') || cleanTransmissionApi.includes('man')) {
                         transmissionSelect.value = 'Manuelle';
                     } else {
-                        transmissionSelect.value = 'Autre';
+                        transmissionSelect.value = 'Autre'; // Définit sur "Autre" si pas de correspondance claire
                     }
                 }
             } catch (error) {
@@ -971,52 +997,82 @@
                 decodedAnnee.textContent = 'Veuillez vérifier le numéro.';
                 decodedCarburant.textContent = '';
                 decodedTransmission.textContent = '';
-                vinResultsDiv.style.display = 'block';
+                vinResultsDiv.style.display = 'block'; // S'assurer que la boîte est visible pour l'erreur
             }
         });
 
         // Store uploaded images as Data URLs
         const uploadedImages = {
-            'Extérieur': [],
-            'Intérieur': [],
+            'Exterieur': [], // CORRECTED KEY - no accent
+            'Interieur': [], // CORRECTED KEY - no accent
             'Dommages': []
         };
 
         document.querySelectorAll('.photo-input').forEach(input => {
-            input.addEventListener('change', function(event) {
-                const category = this.dataset.category;
-                const files = event.target.files;
-                const previewContainer = document.getElementById(`${category.toLowerCase().replace(' ', '')}-preview`);
-                previewContainer.innerHTML = ''; // Clear previous previews
+            // Add event listener for drag-and-drop on the label itself
+            const uploadLabel = input.previousElementSibling; // The label for the input
 
+            // Handle file selection via click
+            input.addEventListener('change', function(event) {
+                handleFiles(event.target.files, this.dataset.category);
+            });
+
+            // Handle drag-and-drop
+            uploadLabel.addEventListener('dragover', (e) => {
+                e.preventDefault(); // Prevent default to allow drop
+                uploadLabel.classList.add('drag-over'); // Optional: Add visual feedback
+            });
+
+            uploadLabel.addEventListener('dragleave', (e) => {
+                uploadLabel.classList.remove('drag-over'); // Optional: Remove visual feedback
+            });
+
+            uploadLabel.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadLabel.classList.remove('drag-over'); // Optional: Remove visual feedback
+                const files = e.dataTransfer.files;
+                handleFiles(files, input.dataset.category); // Pass the category from the input
+            });
+
+            function handleFiles(files, category) {
+                const previewContainer = document.getElementById(`${category.toLowerCase()}-preview`); // Fixed: no ' ' to replace now, rely directly on data-category case
+                previewContainer.innerHTML = ''; // Clear previous previews
                 uploadedImages[category] = []; // Clear previous images for this category
 
-                if (files.length > 0) {
-                    Array.from(files).forEach(file => {
-                        if (file.type.startsWith('image/')) {
-                            const reader = new FileReader();
-                            reader.onload = (e) => {
-                                const imgDataUrl = e.target.result;
-                                uploadedImages[category].push(imgDataUrl);
-
-                                // Create image preview
-                                const imgElement = document.createElement('img');
-                                imgElement.src = imgDataUrl;
-                                imgElement.style.maxWidth = '100px';
-                                imgElement.style.maxHeight = '100px';
-                                imgElement.style.margin = '5px';
-                                imgElement.style.border = '1px solid #ddd';
-                                imgElement.style.borderRadius = '5px';
-                                previewContainer.appendChild(imgElement);
-                            };
-                            reader.readAsDataURL(file);
-                        } else {
-                            alert('Seuls les fichiers image sont acceptés.');
-                        }
-                    });
+                if (files.length === 0) {
+                    previewContainer.innerHTML = 'Aucune image sélectionnée.';
+                    return;
                 }
-            });
+
+                Array.from(files).forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const imgDataUrl = e.target.result;
+                            uploadedImages[category].push(imgDataUrl);
+
+                            // Create image preview
+                            const imgElement = document.createElement('img');
+                            imgElement.src = imgDataUrl;
+                            imgElement.alt = `Photo ${category}`;
+                            // Inline styles for preview (can be moved to CSS)
+                            imgElement.style.maxWidth = '100px';
+                            imgElement.style.maxHeight = '100px';
+                            imgElement.style.margin = '5px';
+                            imgElement.style.border = '1px solid #ddd';
+                            imgElement.style.borderRadius = '5px';
+                            imgElement.style.objectFit = 'cover';
+
+                            previewContainer.appendChild(imgElement);
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        alert('Seuls les fichiers image sont acceptés.');
+                    }
+                });
+            }
         });
+
 
         // Form submission logic for PDF generation
         document.getElementById('evaluationForm').addEventListener('submit', async function(event) {
@@ -1177,8 +1233,10 @@
                 }
 
                 // Add Images
-                for (const category in uploadedImages) {
-                    if (uploadedImages[category].length > 0) {
+                // Iterate through the correctly cased keys in uploadedImages
+                const imageCategories = ['Exterieur', 'Interieur', 'Dommages'];
+                for (const category of imageCategories) {
+                    if (uploadedImages[category] && uploadedImages[category].length > 0) {
                         if (yPos > 250) { // Check for new page before heading
                             doc.addPage();
                             yPos = 20;
@@ -1208,7 +1266,7 @@
 
                             try {
                                 doc.addImage(imgDataUrl, 'JPEG', xOffset, yPos, imageWidth, imageHeight);
-                                doc.text(category + ' Photo', xOffset, yPos + imageHeight + 5); // Add a small caption
+                                doc.text(`${category} Photo`, xOffset, yPos + imageHeight + 5); // Add a small caption
                                 xOffset += imageWidth + margin; // Move X for next image
 
                                 if (xOffset + imageWidth > 190) { // If next image exceeds page width (approx 190mm usable width)
