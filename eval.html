@@ -788,225 +788,156 @@
 
                     <div class="form-group full-width">
                         <label for="commentaires">Commentaires additionnels (facultatif)</label>
-                        <textarea id="commentaires" class="form-control" rows="4" placeholder="Informations supplémentaires sur votre véhicule"></textarea>
+                        <textarea id="commentaires" class="form-control" rows="4" placeholder="Mentionnez toute information pertinente (historique d'entretien, modifications, etc.)"></textarea>
                     </div>
 
-                    <button type="submit" class="btn btn-block">Envoyer ma demande</button>
+                    <div class="form-group full-width">
+                        <button type="submit" class="btn btn-block">Obtenir mon évaluation</button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <footer style="text-align: center; padding: 30px 0; color: var(--gray); font-size: 14px;">
-        <div class="container">
-            <p>&copy; 2025 VendreTonAutoRapide.ca. Tous droits réservés.</p>
-            <p>Montréal, Québec</p>
-        </div>
-    </footer>
-
     <script>
-        // Photo Tab Logic
-        const photoTabs = document.querySelectorAll('.photo-tab');
-        const photoTabContents = document.querySelectorAll('.photo-tab-content');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Photo Tabs Logic
+            const photoTabs = document.querySelectorAll('.photo-tab');
+            const photoContents = document.querySelectorAll('.photo-tab-content');
 
-        photoTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const tabId = tab.getAttribute('data-tab');
+            photoTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const targetTab = tab.dataset.tab;
 
-                photoTabs.forEach(t => t.classList.remove('active'));
-                photoTabContents.forEach(content => content.classList.remove('active'));
+                    photoTabs.forEach(t => t.classList.remove('active'));
+                    photoContents.forEach(c => c.classList.remove('active'));
 
-                tab.classList.add('active');
-                document.getElementById(tabId).classList.add('active');
+                    tab.classList.add('active');
+                    document.getElementById(targetTab).classList.add('active');
+                });
             });
-        });
 
-        // VIN Decoder Logic
-        document.getElementById('decodeVinBtn').addEventListener('click', async function() {
-            const vinInput = document.getElementById('vin');
-            const vin = vinInput.value.trim().toUpperCase(); // Get VIN and convert to uppercase
+            // VIN Decoder (Client-side simulation - REPLACE WITH ACTUAL API CALL)
+            const decodeVinBtn = document.getElementById('decodeVinBtn');
+            decodeVinBtn.addEventListener('click', function() {
+                const vinInput = document.getElementById('vin');
+                const vin = vinInput.value.trim().toUpperCase();
+                const vinResults = document.getElementById('vin-decoder-results');
+                const decodedMarque = document.getElementById('decodedMarque');
+                const decodedModele = document.getElementById('decodedModele');
+                const decodedAnnee = document.getElementById('decodedAnnee');
+                const decodedCarburant = document.getElementById('decodedCarburant');
+                const decodedTransmission = document.getElementById('decodedTransmission');
 
-            const vinResultsDiv = document.getElementById('vin-decoder-results');
-            const decodedMarque = document.getElementById('decodedMarque');
-            const decodedModele = document.getElementById('decodedModele');
-            const decodedAnnee = document.getElementById('decodedAnnee');
-            const decodedCarburant = document.getElementById('decodedCarburant');
-            const decodedTransmission = document.getElementById('decodedTransmission');
+                if (vin.length === 17 && /^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
+                    // In a real application, you would make an AJAX request to a VIN decoding API here.
+                    // For demonstration, we'll simulate a response.
+                    console.log('Decoding VIN:', vin);
 
-            // Simple client-side validation for VIN length and format
-            if (vin.length !== 17 || !/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
-                alert('Veuillez entrer un VIN valide de 17 caractères (sans les lettres I, O, Q).');
-                vinResultsDiv.style.display = 'none'; // Cache les résultats si le VIN est invalide
-                return;
-            }
+                    // Simulate API response delay
+                    setTimeout(() => {
+                        const simulatedData = {
+                            make: 'Toyota',
+                            model: 'Camry',
+                            year: '2020',
+                            fuelType: 'Essence',
+                            transmission: 'Automatique'
+                        };
 
-            // Affiche un message de chargement
-            vinResultsDiv.style.display = 'block';
-            decodedMarque.textContent = 'Décodage en cours...';
-            decodedModele.textContent = '';
-            decodedAnnee.textContent = '';
-            decodedCarburant.textContent = '';
-            decodedTransmission.textContent = '';
+                        decodedMarque.textContent = simulatedData.make;
+                        decodedModele.textContent = simulatedData.model;
+                        decodedAnnee.textContent = simulatedData.year;
+                        decodedCarburant.textContent = simulatedData.fuelType;
+                        decodedTransmission.textContent = simulatedData.transmission;
 
+                        // Auto-fill form fields (optional, but good UX)
+                        document.getElementById('marque').value = simulatedData.make;
+                        document.getElementById('modele').value = simulatedData.model;
+                        document.getElementById('annee').value = simulatedData.year;
+                        document.getElementById('carburant').value = simulatedData.fuelType;
+                        document.getElementById('transmission').value = simulatedData.transmission;
 
-            // --- DÉBUT DE LA LOGIQUE SERVEUR/API (À ADAPTER POUR UNE PRODUCTION SÉCURISÉE) ---
-            // Cette requête est effectuée directement côté client vers l'API publique NHTSA.
-            // Pour une application réelle et sécurisée (protéger les clés API, gérer les limites de requêtes),
-            // il est FORTEMENT recommandé de faire passer cette requête par votre propre serveur backend.
+                        vinResults.style.display = 'block';
+                    }, 1000);
+                } else {
+                    alert("Veuillez entrer un VIN valide de 17 caractères (sans I, O, Q).");
+                    vinResults.style.display = 'none';
+                }
+            });
 
-            try {
-                // EXEMPLE DE REQUÊTE DIRECTE À L'API NHTSA (pour démonstration seulement)
-                const response = await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/' + vin + '?format=json');
+            // Handle file uploads (display file names, not actual upload)
+            const fileInputs = document.querySelectorAll('input[type="file"]');
+            fileInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    const label = this.closest('.upload-box').querySelector('.upload-label span');
+                    if (this.files.length > 0) {
+                        if (this.files.length === 1) {
+                            label.textContent = this.files[0].name;
+                        } else {
+                            label.textContent = `${this.files.length} fichiers sélectionnés`;
+                        }
+                    } else {
+                        label.textContent = `Cliquez ou glissez-déposez les photos de l'${this.id.replace('photo', '').toLowerCase()} ici`;
+                    }
+                });
+            });
 
-                if (!response.ok) {
-                    // Si la réponse HTTP n'est pas OK (ex: 404, 500)
-                    throw new Error('Erreur lors de la communication avec le service de décodage VIN. Statut: ' + response.status);
+            // Form submission
+            const evaluationForm = document.getElementById('evaluationForm');
+            evaluationForm.addEventListener('submit', async function(event) {
+                event.preventDefault(); // Prevent default form submission
+
+                const formData = new FormData();
+
+                // Collect text inputs
+                formData.append('vin', document.getElementById('vin').value);
+                formData.append('marque', document.getElementById('marque').value);
+                formData.append('modele', document.getElementById('modele').value);
+                formData.append('annee', document.getElementById('annee').value);
+                formData.append('kilometrage', document.getElementById('kilometrage').value);
+                formData.append('transmission', document.getElementById('transmission').value);
+                formData.append('carburant', document.getElementById('carburant').value);
+                formData.append('etat', document.querySelector('input[name="etat"]:checked').value);
+                formData.append('nom', document.getElementById('nom').value);
+                formData.append('telephone', document.getElementById('telephone').value);
+                formData.append('courriel', document.getElementById('courriel').value);
+                formData.append('commentaires', document.getElementById('commentaires').value);
+
+                // Collect image files
+                const photoExterieur = document.getElementById('photoExterieur').files;
+                for (let i = 0; i < photoExterieur.length; i++) {
+                    formData.append('photoExterieur', photoExterieur[i]);
                 }
 
-                const data = await response.json();
-                console.log(data); // Pour le débogage: affiche toutes les données brutes de l'API dans la console du navigateur
+                const photoInterieur = document.getElementById('photoInterieur').files;
+                for (let i = 0; i < photoInterieur.length; i++) {
+                    formData.append('photoInterieur', photoInterieur[i]);
+                }
 
-                // Initialise les valeurs par défaut
-                let marque = 'Non trouvée';
-                let modele = 'Non trouvé';
-                let annee = 'Non trouvée';
-                let carburantApiValue = ''; // Stocke la valeur brute du carburant de l'API
-                let transmissionApiValue = ''; // Stocke la valeur brute de la transmission de l'API
+                const photoDommages = document.getElementById('photoDommages').files;
+                for (let i = 0; i < photoDommages.length; i++) {
+                    formData.append('photoDommages', photoDommages[i]);
+                }
 
-                if (data && data.Results && data.Results.length > 0) {
-                    data.Results.forEach(item => {
-                        // Récupération de la marque
-                        if (item.Variable === "Make" && item.Value && item.Value !== "Not Applicable") {
-                            marque = item.Value;
-                        }
-                        // Récupération du modèle
-                        if (item.Variable === "Model" && item.Value && item.Value !== "Not Applicable") {
-                            modele = item.Value;
-                        }
-                        // Récupération de l'année
-                        if (item.Variable === "Model Year" && item.Value && item.Value !== "Not Applicable") {
-                            annee = item.Value;
-                        }
-                        // Récupération du type de carburant (valeur brute de l'API)
-                        if (item.Variable === "Fuel Type - Primary" && item.Value && item.Value !== "Not Applicable") {
-                            carburantApiValue = item.Value;
-                        }
-                        // Récupération de la transmission (valeur brute de l'API)
-                        if (item.Variable === "Transmission Style" && item.Value && item.Value !== "Not Applicable") {
-                            transmissionApiValue = item.Value;
-                        }
+                try {
+                    // Send data to your server
+                    const response = await fetch('/submit-evaluation', { // This endpoint needs to exist on your server
+                        method: 'POST',
+                        body: formData
                     });
 
-                    // Cas particulier où l'API indique que le VIN est invalide via un message
-                    if (data.Message && data.Message.includes("VIN not found")) {
-                        marque = 'VIN Invalide';
-                        modele = 'Non trouvé';
-                        annee = '';
-                        carburantApiValue = '';
-                        transmissionApiValue = '';
-                    }
-
-                } else if (data && data.Message) {
-                    // Si l'API retourne un message d'erreur général (ex: VIN invalide, ou autre souci)
-                    marque = 'Erreur VIN';
-                    modele = data.Message; // Affiche le message d'erreur de l'API
-                    annee = '';
-                    carburantApiValue = '';
-                    transmissionApiValue = '';
-                }
-
-                // Affiche les résultats décodés dans la section d'affichage (pour l'utilisateur)
-                decodedMarque.textContent = marque;
-                decodedModele.textContent = modele;
-                decodedAnnee.textContent = annee;
-                decodedCarburant.textContent = carburantApiValue || 'N/A'; // Affiche la valeur brute si non vide
-                decodedTransmission.textContent = transmissionApiValue || 'N/A'; // Affiche la valeur brute si non vide
-
-                // --- Pré-remplir les champs du formulaire ---
-
-                // Pré-remplir la marque
-                if (marque !== 'Non trouvée' && marque !== 'Erreur VIN') {
-                    const marqueSelect = document.getElementById('marque');
-                    let foundMarque = false;
-                    // Nettoyer la marque pour la comparaison (ex: "Ford Motor Company" -> "fordmotorcompany")
-                    const cleanMarque = marque.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-                    for (let i = 0; i < marqueSelect.options.length; i++) {
-                        // Comparer la valeur de l'option (en minuscules et nettoyée) avec la marque décodée
-                        if (marqueSelect.options[i].value.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanMarque) {
-                            marqueSelect.value = marqueSelect.options[i].value; // Sélectionner l'option avec la valeur exacte
-                            foundMarque = true;
-                            break;
-                        }
-                    }
-                    if (!foundMarque) {
-                        marqueSelect.value = "Autre"; // Sélectionne "Autre" si aucune correspondance exacte n'est trouvée
-                    }
-                }
-
-                // Pré-remplir le modèle
-                if (modele !== 'Non trouvé' && modele !== 'Erreur VIN') {
-                    document.getElementById('modele').value = modele;
-                }
-
-                // Pré-remplir l'année
-                if (annee !== 'Non trouvée' && annee !== 'Erreur VIN') {
-                    document.getElementById('annee').value = annee;
-                }
-
-                // Pré-remplir le carburant
-                if (carburantApiValue && carburantApiValue !== 'Non trouvé' && carburantApiValue !== 'Erreur VIN') {
-                    const carburantSelect = document.getElementById('carburant');
-                    const cleanCarburantApi = carburantApiValue.toLowerCase(); // Valeur API en minuscules
-
-                    if (cleanCarburantApi.includes('gasoline') || cleanCarburantApi.includes('petrol')) {
-                        carburantSelect.value = 'Essence';
-                    } else if (cleanCarburantApi.includes('diesel')) {
-                        carburantSelect.value = 'Diesel';
-                    } else if (cleanCarburantApi.includes('hybrid')) {
-                        carburantSelect.value = 'Hybride';
-                    } else if (cleanCarburantApi.includes('electric') || cleanCarburantApi.includes('ev')) {
-                        carburantSelect.value = 'Électrique';
+                    if (response.ok) {
+                        alert('Votre demande d\'évaluation a été soumise avec succès !');
+                        // Optionally redirect to a confirmation page
+                        window.location.href = '/confirmation.html';
                     } else {
-                        carburantSelect.value = ''; // Réinitialise si pas de correspondance
+                        alert('Une erreur est survenue lors de la soumission. Veuillez réessayer.');
                     }
+                } catch (error) {
+                    console.error('Erreur lors de la soumission du formulaire:', error);
+                    alert('Une erreur de connexion est survenue. Veuillez vérifier votre internet ou réessayer plus tard.');
                 }
-
-                // Pré-remplir la transmission
-                if (transmissionApiValue && transmissionApiValue !== 'Non trouvée' && transmissionApiValue !== 'Erreur VIN') {
-                    const transmissionSelect = document.getElementById('transmission');
-                    const cleanTransmissionApi = transmissionApiValue.toLowerCase(); // Valeur API en minuscules
-
-                    if (cleanTransmissionApi.includes('auto') || cleanTransmissionApi.includes('automatic')) {
-                        transmissionSelect.value = 'Automatique';
-                    } else if (cleanTransmissionApi.includes('manual') || cleanTransmissionApi.includes('man')) {
-                        transmissionSelect.value = 'Manuelle';
-                    } else {
-                        transmissionSelect.value = 'Autre'; // Définit sur "Autre" si pas de correspondance claire
-                    }
-                }
-
-
-            } catch (error) {
-                console.error('Erreur de décodage VIN:', error);
-                decodedMarque.textContent = 'Erreur.';
-                decodedModele.textContent = 'Impossible de décoder le VIN.';
-                decodedAnnee.textContent = 'Veuillez vérifier le numéro.';
-                decodedCarburant.textContent = '';
-                decodedTransmission.textContent = '';
-                vinResultsDiv.style.display = 'block'; // S'assurer que la boîte est visible pour l'erreur
-            }
-
-            // --- FIN DE LA LOGIQUE SERVEUR/API ---
-        });
-
-        // Form submission logic
-        document.getElementById('evaluationForm').addEventListener('submit', function(event) {
-            event.preventDefault(); // Empêche l'envoi par défaut du formulaire
-            alert('Votre formulaire a été soumis! Nous vous contacterons sous peu.');
-            // Ici, vous ajouteriez la logique pour envoyer toutes les données du formulaire à votre serveur.
-            // Cela inclurait le VIN et toutes les autres informations du véhicule et de contact,
-            // ainsi que les photos téléversées (qui nécessitent un traitement côté serveur).
+            });
         });
     </script>
 </body>
