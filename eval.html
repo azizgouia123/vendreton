@@ -80,6 +80,8 @@
             max-width: 800px;
             margin: 40px auto;
             position: relative;
+            flex-wrap: wrap; /* Permet aux étapes de passer à la ligne sur de très petits écrans */
+            padding: 0 10px; /* Ajout d'un petit padding pour éviter de coller aux bords */
         }
 
         .process-steps::before {
@@ -97,6 +99,9 @@
             text-align: center;
             position: relative;
             z-index: 2;
+            flex: 1; /* Permet aux étapes de prendre de l'espace */
+            min-width: 100px; /* Largeur minimale pour éviter le rétrécissement excessif */
+            padding: 0 5px; /* Petit padding pour l'espacement entre les étapes */
         }
 
         .step-number {
@@ -217,10 +222,12 @@
             display: flex;
             border-bottom: 2px solid #eee;
             margin-bottom: 20px;
+            flex-wrap: wrap; /* Permet aux onglets de passer à la ligne */
+            justify-content: center; /* Centrer les onglets sur mobile */
         }
 
         .photo-tab {
-            padding: 12px 20px;
+            padding: 12px 15px; /* Réduire légèrement le padding */
             background: none;
             border: none;
             font-weight: 600;
@@ -229,8 +236,10 @@
             transition: all 0.3s;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px; /* Réduire le gap */
             border-bottom: 3px solid transparent;
+            font-size: 15px; /* Ajuster la taille de la police */
+            white-space: nowrap; /* Empêche le texte de se couper */
         }
 
         .photo-tab.active {
@@ -239,7 +248,7 @@
         }
 
         .photo-tab i {
-            font-size: 16px;
+            font-size: 15px; /* Ajuster la taille de l'icône */
         }
 
         .photo-tab-content {
@@ -271,7 +280,7 @@
 
         .photo-examples-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* Min-width légèrement réduit */
             gap: 15px;
             margin-top: 20px;
         }
@@ -380,6 +389,16 @@
             font-weight: normal;
             color: var(--dark);
         }
+        /* Ajuster le style des radios pour plus d'espace sur mobile */
+        .form-group .radio-label {
+            display: block; /* Chaque label de radio sur une nouvelle ligne */
+            margin-bottom: 10px;
+            margin-left: 0; /* Réinitialiser la marge gauche */
+        }
+        .form-group input[type="radio"] {
+            margin-right: 10px; /* Espacement entre le radio et le texte */
+        }
+
 
         #vin-decoder-results {
             margin-top: 20px;
@@ -419,11 +438,64 @@
 
             .photo-examples-grid {
                 grid-template-columns: 1fr 1fr;
+                /* Assure que même sur des écrans étroits, il y a deux colonnes, sinon une */
+                gap: 10px; /* Réduire le gap sur mobile */
             }
 
             .photo-tab {
                 padding: 8px 12px;
                 font-size: 14px;
+                gap: 5px;
+            }
+
+            .process-steps {
+                flex-direction: column; /* Empile les étapes verticalement */
+                align-items: center; /* Centre les étapes */
+                margin-bottom: 20px; /* Ajuster la marge */
+            }
+            .process-steps::before {
+                display: none; /* Cache la ligne de progression sur mobile car les étapes s'empilent */
+            }
+            .step {
+                flex: 0 0 100%;
+                margin-bottom: 20px; /* Espacement entre les étapes empilées */
+                padding: 0;
+            }
+            .step:last-child {
+                margin-bottom: 0; /* Pas de marge pour la dernière étape */
+            }
+        }
+
+        /* Nouveau breakpoint pour les très petits téléphones */
+        @media (max-width: 480px) {
+            .eval-hero h1 {
+                font-size: 28px;
+            }
+            .eval-hero p {
+                font-size: 16px;
+            }
+            .eval-form-container {
+                padding: 15px;
+            }
+            .form-header h2 {
+                font-size: 24px;
+            }
+            .form-control, .btn {
+                font-size: 14px;
+                padding: 10px 12px;
+            }
+            .photo-tab {
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+            .photo-examples-grid {
+                grid-template-columns: 1fr; /* Une seule colonne sur très petits écrans */
+            }
+            .radio-label {
+                font-size: 14px; /* S'assurer que le texte est lisible */
+            }
+            .form-group .radio-label {
+                padding-right: 5px; /* Éviter que le texte ne touche le bord droit */
             }
         }
     </style>
