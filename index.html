@@ -44,25 +44,35 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap; /* Permet aux éléments de passer à la ligne */
         }
         
         .logo {
             font-size: 28px;
             font-weight: 800;
             color: var(--bleu-qc);
+            white-space: nowrap; /* Empêche le logo de se couper */
         }
         
         .logo span {
             color: var(--rouge-alerte);
         }
         
+        .nav-links {
+            display: flex; /* Utilise flexbox pour les liens de navigation */
+            flex-wrap: wrap; /* Permet aux liens de passer à la ligne si nécessaire */
+            justify-content: flex-end; /* Aligne les liens à droite */
+            align-items: center;
+        }
+
         .nav-links a {
-            margin-left: 25px;
+            margin-left: 20px; /* Légèrement réduit pour plus d'espace */
             text-decoration: none;
             color: var(--gris-fonce);
             font-weight: 600;
-            font-size: 16px;
+            font-size: 15px; /* Légèrement réduit pour les écrans */
             transition: all 0.3s;
+            white-space: nowrap; /* Empêche les liens de se couper */
         }
         
         .nav-links a:hover {
@@ -72,8 +82,10 @@
         .nav-links .btn-nav {
             background: var(--rouge-alerte);
             color: white;
-            padding: 10px 20px;
+            padding: 8px 18px; /* Réduit le padding du bouton */
             border-radius: 5px;
+            font-size: 15px; /* Adapte la taille de la police */
+            margin-left: 20px; /* S'assure d'une marge suffisante */
         }
         
         /* Hero Québec */
@@ -175,17 +187,19 @@
         .benefits {
             display: flex;
             flex-wrap: wrap;
-            justify-content: space-between;
+            justify-content: center; /* Centrer les éléments quand ils se brisent */
+            gap: 25px; /* Ajouter un espacement entre les éléments */
             margin-top: 40px;
         }
         
         .benefit {
-            flex: 0 0 48%;
+            flex: 0 0 calc(50% - 15px); /* Ajuster pour le gap */
+            max-width: 450px; /* Limiter la largeur sur les grands écrans */
             background: white;
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            margin-bottom: 25px;
+            margin-bottom: 0; /* Supprimer la marge bottom ici, utiliser gap sur le parent */
             display: flex;
             align-items: flex-start;
         }
@@ -207,16 +221,20 @@
             display: flex;
             border-bottom: 2px solid #eee;
             margin-bottom: 30px;
+            flex-wrap: wrap; /* Permet aux onglets de passer à la ligne */
+            justify-content: center; /* Centrer les onglets sur mobile */
         }
         
         .tab-btn {
-            padding: 15px 25px;
+            padding: 15px 20px; /* Réduire légèrement le padding */
             background: none;
             border: none;
             border-bottom: 3px solid transparent;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
+            white-space: nowrap; /* Empêche le texte de se couper */
+            font-size: 15px; /* Ajuster la taille de la police */
         }
         
         .tab-btn.active {
@@ -292,6 +310,7 @@
             flex-wrap: wrap;
             justify-content: space-between;
             margin-bottom: 40px;
+            gap: 20px; /* Ajouter un gap pour un meilleur espacement sur mobile */
         }
         
         .footer-col {
@@ -333,12 +352,15 @@
         /* Responsive */
         @media (max-width: 992px) {
             .step {
-                flex: 0 0 100%;
+                flex: 0 0 48%; /* Deux colonnes sur les tablettes */
                 margin-bottom: 40px;
             }
-            
+            .steps {
+                justify-content: space-around; /* Mieux répartir les étapes */
+            }
             .benefit {
-                flex: 0 0 100%;
+                flex: 0 0 calc(100% - 0px); /* Une seule colonne sur tablettes/petits écrans */
+                max-width: 500px; /* Garder une taille maximale raisonnable */
             }
             
             .footer-col {
@@ -350,14 +372,31 @@
         @media (max-width: 768px) {
             .header-container {
                 flex-direction: column;
+                align-items: flex-start; /* Aligner les éléments à gauche dans la colonne */
             }
             
             .logo {
                 margin-bottom: 15px;
+                width: 100%; /* Le logo prend toute la largeur disponible */
+                text-align: center; /* Centre le texte du logo */
+            }
+
+            .nav-links {
+                flex-direction: column; /* Les liens de navigation s'empilent */
+                width: 100%; /* Prend toute la largeur */
+                align-items: center; /* Centrer les liens */
             }
             
             .nav-links a {
-                margin: 0 10px;
+                margin: 10px 0; /* Marge verticale pour les liens */
+                font-size: 16px; /* Ajuster la taille de la police si besoin */
+            }
+
+            .nav-links .btn-nav {
+                margin-top: 15px; /* Espacement après les liens */
+                width: 80%; /* Le bouton occupe une bonne partie de la largeur */
+                max-width: 250px; /* Limiter la largeur maximale du bouton */
+                text-align: center;
             }
             
             .hero h1 {
@@ -370,6 +409,41 @@
             
             .section-title h2 {
                 font-size: 28px;
+            }
+
+            .step {
+                flex: 0 0 100%; /* Une seule colonne sur les petits écrans */
+            }
+
+            .footer-col {
+                flex: 0 0 100%; /* Chaque colonne de pied de page prend toute la largeur */
+                text-align: center; /* Centrer le contenu des colonnes du pied de page */
+            }
+
+            .footer-col ul {
+                padding-left: 0; /* Supprimer le padding par défaut des listes */
+            }
+            .footer-col li {
+                display: inline-block; /* Permet d'aligner les éléments de liste en ligne */
+                margin: 0 8px 10px; /* Marge horizontale pour les éléments */
+            }
+        }
+
+        /* Ajout d'un breakpoint pour les très petits écrans (ex: iPhone SE) */
+        @media (max-width: 480px) {
+            .hero h1 {
+                font-size: 28px;
+            }
+            .hero p {
+                font-size: 16px;
+            }
+            .nav-links a, .nav-links .btn-nav {
+                font-size: 14px; /* Réduire la taille de la police pour très petits écrans */
+                padding: 6px 15px; /* Réduire le padding du bouton */
+            }
+            .tab-btn {
+                font-size: 13px; /* Réduire la taille de la police des onglets */
+                padding: 10px 15px;
             }
         }
     </style>
