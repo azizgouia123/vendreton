@@ -408,19 +408,56 @@
             padding: 10px;
             min-height: 50px;
             align-items: center;
+            /* If no images, center the text */
             justify-content: center;
             color: var(--gray);
             font-size: 14px;
+            /* If no images, show placeholder text */
+        }
+        .image-preview-container:empty::before {
+            content: "Aucune image sélectionnée.";
+            display: block;
+            color: var(--gray);
         }
 
-        .image-preview-container img {
+        .image-preview-item {
+            position: relative;
             max-width: 120px;
             max-height: 100px;
-            width: auto;
-            height: auto;
             border: 1px solid #ddd;
             border-radius: 5px;
-            object-fit: cover;
+            overflow: hidden;
+        }
+
+        .image-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Crop to fit container */
+        }
+
+        .delete-image-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s ease-in-out;
+            z-index: 10; /* Ensure it's above the image */
+        }
+
+        .delete-image-btn:hover {
+            opacity: 1;
+            background-color: #C0112B;
         }
 
         #vin-decoder-results {
@@ -723,7 +760,7 @@
                                     <span>Cliquez ou glissez-déposez les photos de l'extérieur ici</span>
                                     <small>Formats acceptés: JPG, PNG</small>
                                 </label>
-                                <input type="file" id="photoExterieur" class="photo-input" data-category="Exterieur" multiple style="display: none;">
+                                <input type="file" id="photoExterieur" class="photo-input" data-category="Exterieur" data-max-files="10" multiple style="display: none;">
                                 <div id="exterieur-preview" class="image-preview-container"></div>
                             </div>
                         </div>
@@ -769,7 +806,7 @@
                                     <span>Cliquez ou glissez-déposez les photos de l'intérieur ici</span>
                                     <small>Formats acceptés: JPG, PNG</small>
                                 </label>
-                                <input type="file" id="photoInterieur" class="photo-input" data-category="Interieur" multiple style="display: none;">
+                                <input type="file" id="photoInterieur" class="photo-input" data-category="Interieur" data-max-files="10" multiple style="display: none;">
                                 <div id="interieur-preview" class="image-preview-container"></div>
                             </div>
                         </div>
@@ -785,7 +822,7 @@
                                     <span>Cliquez ou glissez-déposez les photos des dommages ici</span>
                                     <small>Formats acceptés: JPG, PNG</small>
                                 </label>
-                                <input type="file" id="photoDommages" class="photo-input" data-category="Dommages" multiple style="display: none;">
+                                <input type="file" id="photoDommages" class="photo-input" data-category="Dommages" data-max-files="20" multiple style="display: none;">
                                 <div id="dommages-preview" class="image-preview-container"></div>
                             </div>
                         </div>
@@ -858,14 +895,12 @@
             const decodedCarburant = document.getElementById('decodedCarburant');
             const decodedTransmission = document.getElementById('decodedTransmission');
 
-            // Simple client-side validation for VIN length and format
             if (vin.length !== 17 || !/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
                 alert('Veuillez entrer un VIN valide de 17 caractères (sans les lettres I, O, Q).');
                 vinResultsDiv.style.display = 'none';
                 return;
             }
 
-            // Show loading message
             vinResultsDiv.style.display = 'block';
             decodedMarque.textContent = 'Décodage en cours...';
             decodedModele.textContent = '';
@@ -874,7 +909,6 @@
             decodedTransmission.textContent = '';
 
             try {
-                // Direct request to NHTSA API (for demonstration only)
                 const response = await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/' + vin + '?format=json');
 
                 if (!response.ok) {
@@ -882,7 +916,7 @@
                 }
 
                 const data = await response.json();
-                console.log(data); // For debugging: prints all raw API data to browser console
+                console.log(data);
 
                 let marque = 'Non trouvée';
                 let modele = 'Non trouvé';
@@ -931,7 +965,6 @@
                 decodedCarburant.textContent = carburantApiValue || 'N/A';
                 decodedTransmission.textContent = transmissionApiValue || 'N/A';
 
-                // Attempt to pre-fill form fields
                 if (marque !== 'Non trouvée' && marque !== 'Erreur VIN') {
                     const marqueSelect = document.getElementById('marque');
                     let foundMarque = false;
@@ -997,20 +1030,36 @@
             }
         });
 
-        // Store uploaded images as Data URLs
+        // Store uploaded images as Data URLs with unique IDs for deletion
         const uploadedImages = {
-            'Exterieur': [], /* CORRECTED KEY - no accent */
-            'Interieur': [], /* CORRECTED KEY - no accent */
+            'Exterieur': [],
+            'Interieur': [],
             'Dommages': []
         };
 
+        // Function to delete an image
+        function deleteImage(categoryId, imageId) {
+            uploadedImages[categoryId] = uploadedImages[categoryId].filter(img => img.id !== imageId);
+            const previewItem = document.getElementById(imageId);
+            if (previewItem) {
+                previewItem.remove();
+            }
+            // If no images left, display placeholder
+            const previewContainer = document.getElementById(`${categoryId.toLowerCase()}-preview`);
+            if (uploadedImages[categoryId].length === 0 && previewContainer.querySelector('.image-preview-item') === null) {
+                previewContainer.innerHTML = ''; // This will trigger the ::before pseudo-element
+            }
+        }
+
         document.querySelectorAll('.photo-input').forEach(input => {
-            // Add event listener for drag-and-drop on the label itself
             const uploadLabel = input.previousElementSibling;
+            const category = input.dataset.category;
+            const maxFiles = parseInt(input.dataset.maxFiles, 10);
+            const previewContainer = document.getElementById(`${category.toLowerCase()}-preview`);
 
             // Handle file selection via click
             input.addEventListener('change', function(event) {
-                handleFiles(event.target.files, this.dataset.category);
+                handleFiles(event.target.files, category, maxFiles, previewContainer);
             });
 
             // Handle drag-and-drop
@@ -1027,41 +1076,70 @@
                 e.preventDefault();
                 uploadLabel.classList.remove('drag-over');
                 const files = e.dataTransfer.files;
-                handleFiles(files, input.dataset.category);
+                handleFiles(files, category, maxFiles, previewContainer);
             });
 
-            function handleFiles(files, category) {
-                // The `category` variable now directly uses the `data-category` value
-                // (e.g., "Exterieur", "Interieur", "Dommages") which matches the
-                // `id` of the preview containers (e.g., "exterieur-preview" after toLowerCase()).
-                const previewContainer = document.getElementById(`${category.toLowerCase()}-preview`);
-                previewContainer.innerHTML = '';
-                uploadedImages[category] = [];
+            function handleFiles(files, categoryId, maxFiles, previewContainerElement) {
+                // Check current number of images vs. max limit
+                const currentImageCount = uploadedImages[categoryId].length;
+                let filesToAddCount = 0;
+                Array.from(files).forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        filesToAddCount++;
+                    }
+                });
 
-                if (files.length === 0) {
-                    previewContainer.innerHTML = 'Aucune image sélectionnée.';
-                    return;
+                if (currentImageCount + filesToAddCount > maxFiles) {
+                    alert(`Vous ne pouvez télécharger qu'un maximum de ${maxFiles} photos pour la section "${categoryId}". Vous avez actuellement ${currentImageCount} photos.`);
+                    return; // Stop processing if limit exceeded
                 }
+
+                // Clear previous previews (if adding new set without explicitly deleting previous ones)
+                // If you want to *add* to existing, remove the following line:
+                // previewContainerElement.innerHTML = '';
+                // And instead, add a check for the current count.
+                // For this implementation, we will append, so we don't clear the container.
 
                 Array.from(files).forEach(file => {
                     if (file.type.startsWith('image/')) {
+                        // Check limit again for each file to ensure we don't exceed if user tries to add many
+                        if (uploadedImages[categoryId].length >= maxFiles) {
+                            console.warn(`Limit reached for ${categoryId}. Skipping file.`);
+                            return;
+                        }
+
                         const reader = new FileReader();
                         reader.onload = (e) => {
                             const imgDataUrl = e.target.result;
-                            uploadedImages[category].push(imgDataUrl);
+                            const imageId = `img-${categoryId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // Unique ID
 
-                            // Create image preview
+                            uploadedImages[categoryId].push({
+                                id: imageId,
+                                dataUrl: imgDataUrl,
+                                file: file // Store the original file object if needed later
+                            });
+
+                            // Create image preview item with delete button
+                            const imgPreviewItem = document.createElement('div');
+                            imgPreviewItem.className = 'image-preview-item';
+                            imgPreviewItem.id = imageId;
+
                             const imgElement = document.createElement('img');
                             imgElement.src = imgDataUrl;
-                            imgElement.alt = `Photo ${category}`;
-                            imgElement.style.maxWidth = '100px';
-                            imgElement.style.maxHeight = '100px';
-                            imgElement.style.margin = '5px';
-                            imgElement.style.border = '1px solid #ddd';
-                            imgElement.style.borderRadius = '5px';
-                            imgElement.style.objectFit = 'cover';
+                            imgElement.alt = `Photo ${categoryId}`;
 
-                            previewContainer.appendChild(imgElement);
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.className = 'delete-image-btn';
+                            deleteBtn.innerHTML = '&times;'; // HTML entity for 'x'
+                            deleteBtn.title = 'Supprimer cette photo';
+                            deleteBtn.onclick = (e) => {
+                                e.stopPropagation(); // Prevent triggering other events on the parent
+                                deleteImage(categoryId, imageId);
+                            };
+
+                            imgPreviewItem.appendChild(imgElement);
+                            imgPreviewItem.appendChild(deleteBtn);
+                            previewContainerElement.appendChild(imgPreviewItem);
                         };
                         reader.readAsDataURL(file);
                     } else {
@@ -1252,7 +1330,9 @@
                         const imageHeight = 60;
                         const margin = 10;
 
-                        for (const imgDataUrl of uploadedImages[category]) {
+                        for (const imgObj of uploadedImages[category]) { // Iterate through the objects in the array
+                            const imgDataUrl = imgObj.dataUrl; // Get the dataUrl from the object
+
                             if (yPos + imageHeight + margin > 290) {
                                 doc.addPage();
                                 yPos = 20;
