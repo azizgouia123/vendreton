@@ -54,7 +54,7 @@
 
         /* Hero Évaluation */
         .eval-hero {
-            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('1.png');
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('1.png'); /* Ensure '1.png' is in the same directory or provide a full path */
             background-size: cover;
             background-position: center;
             color: white;
@@ -408,9 +408,11 @@
             padding: 10px;
             min-height: 50px;
             align-items: center;
+            /* If no images, center the text */
             justify-content: center;
             color: var(--gray);
             font-size: 14px;
+            /* If no images, show placeholder text */
         }
         .image-preview-container:empty::before {
             content: "Aucune image sélectionnée.";
@@ -430,7 +432,7 @@
         .image-preview-item img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: cover; /* Crop to fit container */
         }
 
         .delete-image-btn {
@@ -450,7 +452,7 @@
             cursor: pointer;
             opacity: 0.8;
             transition: opacity 0.2s ease-in-out;
-            z-index: 10;
+            z-index: 10; /* Ensure it's above the image */
         }
 
         .delete-image-btn:hover {
@@ -476,38 +478,58 @@
             color: var(--primary);
         }
 
-        /* Scanner Modal */
-        .scanner-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .scanner-video {
-            width: 90%;
-            max-width: 600px;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .scanner-controls {
+        /* Styles for VIN Scanner */
+        #qr-reader-container {
             margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: var(--light-gray);
             text-align: center;
+            display: none; /* Hidden by default */
         }
 
-        #scannerCloseBtn {
-            background-color: var(--secondary);
-            color: white;
-            padding: 12px 25px;
+        #qr-reader {
+            width: 100%;
+            max-width: 400px; /* Adjust as needed */
+            margin: 0 auto;
+            border: 1px solid var(--primary);
+            border-radius: 5px;
+            overflow: hidden; /* Hide overflow of video stream */
         }
+
+        #qr-reader-results {
+            margin-top: 10px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        #scanVinBtn, #stopScanBtn {
+            margin-top: 10px;
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        #scanVinBtn:hover, #stopScanBtn:hover {
+            background-color: #004494;
+        }
+
+        #stopScanBtn {
+            background-color: var(--secondary);
+            margin-left: 10px;
+            display: none; /* Hidden by default */
+        }
+        #stopScanBtn:hover {
+            background-color: #C0112B;
+        }
+
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -591,7 +613,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://unpkg.com/@zxing/library@0.19.1"></script>
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
 </head>
 <body>
     <header class="eval-header">
@@ -633,13 +655,19 @@
                 <div class="form-grid">
                     <div class="form-group full-width">
                         <label for="vin">Numéro d'identification du véhicule (VIN) <i class="fas fa-question-circle" title="Le VIN se trouve généralement sur le tableau de bord (côté conducteur) ou sur l'étiquette de la porte."></i></label>
-                        <div style="display: flex; gap: 10px; margin-top: 10px;">
-                            <input type="text" id="vin" class="form-control" placeholder="Entrez le VIN de 17 caractères" maxlength="17" pattern="[A-HJ-NPR-Z0-9]{17}" title="Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)" required style="flex: 1;">
-                            <button type="button" id="scanVinBtn" class="btn" title="Scanner avec la caméra">
-                                <i class="fas fa-camera"></i>
-                            </button>
+                        <input type="text" id="vin" class="form-control" placeholder="Entrez le VIN de 17 caractères" maxlength="17" pattern="[A-HJ-NPR-Z0-9]{17}" title="Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)" required>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                            <button type="button" id="decodeVinBtn" class="btn" style="flex-grow: 1; margin-right: 10px;">Décoder le VIN</button>
+                            <button type="button" id="scanVinBtn" class="btn" style="flex-grow: 1; background-color: var(--primary);">Scanner le VIN <i class="fas fa-barcode"></i></button>
                         </div>
-                        <button type="button" id="decodeVinBtn" class="btn" style="margin-top: 10px;">Décoder le VIN</button>
+                    </div>
+
+                    <div id="qr-reader-container" class="full-width">
+                        <h4>Scanner de VIN</h4>
+                        <p>Placez le code-barres VIN ou le QR code devant votre caméra.</p>
+                        <div id="qr-reader" style="width: 100%; max-width: 400px; margin: 15px auto;"></div>
+                        <div id="qr-reader-results"></div>
+                        <button type="button" id="stopScanBtn" class="btn">Arrêter le scan</button>
                     </div>
 
                     <div id="vin-decoder-results" class="full-width">
@@ -688,7 +716,7 @@
                             <script>
                                 const currentYear = new Date().getFullYear();
                                 for (let year = currentYear; year >= 1990; year--) {
-                                    document.write(`<option value="${year}">${year}</option>`);
+                                    document.write(`<option value="<span class="math-inline">\{year\}"\></span>{year}</option>`);
                                 }
                             </script>
                         </select>
@@ -1067,61 +1095,6 @@
             }
         });
 
-        // Scanner VIN
-        document.getElementById('scanVinBtn').addEventListener('click', async () => {
-            const codeReader = new ZXing.BrowserMultiFormatReader();
-            
-            const modal = document.createElement('div');
-            modal.className = 'scanner-modal';
-            
-            const video = document.createElement('video');
-            video.className = 'scanner-video';
-            video.setAttribute('playsinline', '');
-            
-            const controls = document.createElement('div');
-            controls.className = 'scanner-controls';
-            
-            const closeBtn = document.createElement('button');
-            closeBtn.id = 'scannerCloseBtn';
-            closeBtn.className = 'btn';
-            closeBtn.innerHTML = '<i class="fas fa-times"></i> Fermer le scanner';
-            
-            modal.appendChild(video);
-            modal.appendChild(controls);
-            controls.appendChild(closeBtn);
-            document.body.appendChild(modal);
-
-            closeBtn.addEventListener('click', () => {
-                codeReader.reset();
-                modal.remove();
-            });
-
-            try {
-                const result = await codeReader.decodeFromVideoDevice(null, video, (result, err) => {
-                    if (result) {
-                        const scannedVin = result.text.toUpperCase();
-                        if (/^[A-HJ-NPR-Z0-9]{17}$/.test(scannedVin)) {
-                            document.getElementById('vin').value = scannedVin;
-                            codeReader.reset();
-                            modal.remove();
-                            document.getElementById('decodeVinBtn').click();
-                        } else {
-                            alert('Code scanné invalide. Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)');
-                        }
-                    }
-                    if (err && !(err instanceof ZXing.NotFoundException)) {
-                        console.error(err);
-                        alert(`Erreur de scan: ${err}`);
-                        modal.remove();
-                    }
-                });
-            } catch (error) {
-                console.error('Erreur:', error);
-                alert('Accès à la caméra refusé ou appareil non supporté');
-                modal.remove();
-            }
-        });
-
         // Store uploaded images as Data URLs with unique IDs for deletion
         const uploadedImages = {
             'Exterieur': [],
@@ -1136,9 +1109,10 @@
             if (previewItem) {
                 previewItem.remove();
             }
+            // If no images left, display placeholder
             const previewContainer = document.getElementById(`${categoryId.toLowerCase()}-preview`);
             if (uploadedImages[categoryId].length === 0 && previewContainer.querySelector('.image-preview-item') === null) {
-                previewContainer.innerHTML = '';
+                previewContainer.innerHTML = ''; // This will trigger the ::before pseudo-element
             }
         }
 
@@ -1148,10 +1122,12 @@
             const maxFiles = parseInt(input.dataset.maxFiles, 10);
             const previewContainer = document.getElementById(`${category.toLowerCase()}-preview`);
 
+            // Handle file selection via click
             input.addEventListener('change', function(event) {
                 handleFiles(event.target.files, category, maxFiles, previewContainer);
             });
 
+            // Handle drag-and-drop
             uploadLabel.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 uploadLabel.classList.add('drag-over');
@@ -1169,6 +1145,7 @@
             });
 
             function handleFiles(files, categoryId, maxFiles, previewContainerElement) {
+                // Check current number of images vs. max limit
                 const currentImageCount = uploadedImages[categoryId].length;
                 let filesToAddCount = 0;
                 Array.from(files).forEach(file => {
@@ -1178,12 +1155,13 @@
                 });
 
                 if (currentImageCount + filesToAddCount > maxFiles) {
-                    alert(`Vous ne pouvez télécharger qu'un maximum de ${maxFiles} photos pour la section "${categoryId}". Vous avez actuellement ${currentImageCount} photos.`);
-                    return;
+                    alert(`Vous ne pouvez télécharger qu'un maximum de <span class="math-inline">\{maxFiles\} photos pour la section "</span>{categoryId}". Vous avez actuellement ${currentImageCount} photos.`);
+                    return; // Stop processing if limit exceeded
                 }
 
                 Array.from(files).forEach(file => {
                     if (file.type.startsWith('image/')) {
+                        // Check limit again for each file to ensure we don't exceed if user tries to add many
                         if (uploadedImages[categoryId].length >= maxFiles) {
                             console.warn(`Limit reached for ${categoryId}. Skipping file.`);
                             return;
@@ -1192,14 +1170,15 @@
                         const reader = new FileReader();
                         reader.onload = (e) => {
                             const imgDataUrl = e.target.result;
-                            const imageId = `img-${categoryId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                            const imageId = `img-<span class="math-inline">\{categoryId\}\-</span>{Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // Unique ID
 
                             uploadedImages[categoryId].push({
                                 id: imageId,
                                 dataUrl: imgDataUrl,
-                                file: file
+                                file: file // Store the original file object if needed later
                             });
 
+                            // Create image preview item with delete button
                             const imgPreviewItem = document.createElement('div');
                             imgPreviewItem.className = 'image-preview-item';
                             imgPreviewItem.id = imageId;
@@ -1210,10 +1189,10 @@
 
                             const deleteBtn = document.createElement('button');
                             deleteBtn.className = 'delete-image-btn';
-                            deleteBtn.innerHTML = '&times;';
+                            deleteBtn.innerHTML = '&times;'; // HTML entity for 'x'
                             deleteBtn.title = 'Supprimer cette photo';
                             deleteBtn.onclick = (e) => {
-                                e.stopPropagation();
+                                e.stopPropagation(); // Prevent triggering other events on the parent
                                 deleteImage(categoryId, imageId);
                             };
 
@@ -1229,13 +1208,15 @@
             }
         });
 
+
         // Form submission logic for PDF generation
         document.getElementById('evaluationForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
+            event.preventDefault(); // Prevent default form submission
 
+            // Basic validation
             if (!this.checkValidity()) {
                 alert("Veuillez remplir tous les champs obligatoires du formulaire.");
-                this.reportValidity();
+                this.reportValidity(); // Show browser validation messages
                 return;
             }
 
@@ -1244,22 +1225,25 @@
             submitBtn.textContent = 'Génération du PDF...';
 
             try {
+                // Initialize jsPDF
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
 
-                let yPos = 20;
+                let yPos = 20; // Initial Y position
 
+                // Add Title
                 doc.setFontSize(22);
-                doc.setTextColor(30, 30, 30);
+                doc.setTextColor(30, 30, 30); // var(--dark)
                 doc.text("Rapport d'Évaluation Véhicule", 105, yPos, { align: 'center' });
                 yPos += 15;
 
+                // Vehicle Information
                 doc.setFontSize(16);
-                doc.setTextColor(0, 86, 179);
+                doc.setTextColor(0, 86, 179); // var(--primary)
                 doc.text("Informations du Véhicule", 20, yPos);
                 yPos += 10;
                 doc.setDrawColor(0, 86, 179);
-                doc.line(20, yPos, 190, yPos);
+                doc.line(20, yPos, 190, yPos); // Underline
                 yPos += 10;
 
                 doc.setFontSize(12);
@@ -1285,7 +1269,7 @@
                 ];
 
                 vehicleInfo.forEach(info => {
-                    if (yPos > 280) {
+                    if (yPos > 280) { // Check for new page (A4 height is ~297mm)
                         doc.addPage();
                         yPos = 20;
                         doc.setFontSize(16);
@@ -1300,8 +1284,9 @@
                     doc.text(info, 20, yPos);
                     yPos += 7;
                 });
-                yPos += 10;
+                yPos += 10; // Add space after vehicle info
 
+                // Contact Information
                 doc.setFontSize(16);
                 doc.setTextColor(0, 86, 179);
                 if (yPos > 270) {
@@ -1345,6 +1330,7 @@
                 });
                 yPos += 10;
 
+                // Additional Comments
                 if (commentaires) {
                      if (yPos > 270) {
                         doc.addPage();
@@ -1380,6 +1366,7 @@
                     yPos += 10;
                 }
 
+                // Add Images
                 const imageCategories = ['Exterieur', 'Interieur', 'Dommages'];
                 for (const category of imageCategories) {
                     if (uploadedImages[category] && uploadedImages[category].length > 0) {
@@ -1402,8 +1389,8 @@
                         const imageHeight = 60;
                         const margin = 10;
 
-                        for (const imgObj of uploadedImages[category]) {
-                            const imgDataUrl = imgObj.dataUrl;
+                        for (const imgObj of uploadedImages[category]) { // Iterate through the objects in the array
+                            const imgDataUrl = imgObj.dataUrl; // Get the dataUrl from the object
 
                             if (yPos + imageHeight + margin > 290) {
                                 doc.addPage();
@@ -1434,6 +1421,7 @@
                     }
                 }
 
+                // Save the PDF
                 doc.save('Evaluation_Vehicule.pdf');
                 alert('Le rapport PDF a été généré et téléchargé!');
 
@@ -1445,6 +1433,79 @@
                 submitBtn.textContent = 'Générer l\'évaluation PDF';
             }
         });
-    </script>
-</body>
-</html>
+
+        // --- NOUVEAU CODE POUR LE SCANNER VIN ---
+        const qrReaderContainer = document.getElementById('qr-reader-container');
+        const scanVinBtn = document.getElementById('scanVinBtn');
+        const stopScanBtn = document.getElementById('stopScanBtn');
+        const vinInput = document.getElementById('vin');
+        const qrReaderResults = document.getElementById('qr-reader-results');
+
+        let html5QrCode; // Déclarer la variable pour l'instance du scanner
+
+        scanVinBtn.addEventListener('click', () => {
+            qrReaderContainer.style.display = 'block'; // Afficher le conteneur du scanner
+            scanVinBtn.style.display = 'none'; // Cacher le bouton "Scanner"
+            stopScanBtn.style.display = 'inline-block'; // Afficher le bouton "Arrêter"
+
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("qr-reader");
+            }
+
+            html5QrCode.start(
+                { facingMode: "environment" }, // Utilise la caméra arrière
+                {
+                    fps: 10,    // Taux de trames par seconde
+                    qrbox: { width: 250, height: 250 }  // Zone de numérisation
+                },
+                (decodedText, decodedResult) => {
+                    // Succès du scan
+                    qrReaderResults.textContent = `VIN Scanné: ${decodedText}`;
+                    vinInput.value = decodedText; // Mettre à jour le champ VIN
+                    stopScanner(); // Arrêter le scanner après un scan réussi
+                    // Déclencher le décodage VIN automatiquement après le scan
+                    document.getElementById('decodeVinBtn').click();
+                },
+                (errorMessage) => {
+                    // Échec du scan (peut être laissé vide ou pour le débogage)
+                    // console.log(`Scan Error: ${errorMessage}`);
+                }
+            ).catch((err) => {
+                console.error("Erreur de démarrage du scanner de code-barres:", err);
+                qrReaderResults.textContent = `Erreur de caméra: ${err}`;
+                alert(`Erreur lors du démarrage du scanner: ${err.message}. Veuillez vérifier les permissions de la caméra.`);
+                stopScanner();
+            });
+        });
+
+        stopScanBtn.addEventListener('click', () => {
+            stopScanner();
+        });
+
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.is="eval.html" src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>`.
+2.  **Styles pour le scanner** :
+    J'ai ajouté des styles spécifiques pour les éléments du scanner (`#qr-reader-container`, `#qr-reader`, `#qr-reader-results`, `#scanVinBtn`, `#stopScanBtn`) pour les rendre visibles et fonctionnels.
+3.  **Structure HTML pour le scanner** :
+    Un `div` avec l'ID `qr-reader-container` est inséré juste après le champ VIN pour contenir l'interface du scanner. Il est initialement caché (`display: none;`).
+    ```html
+    <div id="qr-reader-container" class="full-width">
+        <h4>Scanner de VIN</h4>
+        <p>Placez le code-barres VIN ou le QR code devant votre caméra.</p>
+        <div id="qr-reader" style="width: 100%; max-width: 400px; margin: 15px auto;"></div>
+        <div id="qr-reader-results"></div>
+        <button type="button" id="stopScanBtn" class="btn">Arrêter le scan</button>
+    </div>
+    ```
+4.  **Boutons de contrôle du scanner** :
+    Un bouton "Scanner le VIN" (`id="scanVinBtn"`) a été ajouté à côté du bouton "Décoder le VIN" existant pour activer le scanner. Un bouton "Arrêter le scan" (`id="stopScanBtn"`) est également inclus pour le désactiver.
+5.  **Logique JavaScript du scanner** :
+    J'ai ajouté un nouveau bloc de script à la fin de votre section `<script>` existante. Ce bloc gère l'initialisation et le contrôle de `html5-qrcode`.
+    * `html5QrCode` est déclaré pour contenir l'instance du scanner.
+    * L'événement `click` sur `scanVinBtn` affiche le conteneur du scanner, cache le bouton "Scanner", affiche le bouton "Arrêter" et démarre le scanner en utilisant `html5QrCode.start()`.
+    * `onScanSuccess` est la fonction appelée lorsque le VIN est scanné. Elle met à jour le champ VIN, affiche le résultat, et appelle `stopScanner()`.
+    * `onScanFailure` est inclus pour la gestion des erreurs de scan.
+    * `stopScanBtn` a un événement `click` qui appelle la fonction `stopScanner()`.
+    * La fonction `stopScanner()` arrête le flux de la caméra, cache le conteneur du scanner et affiche le bouton "Scanner".
+
+Ces modifications devraient vous fournir une fonctionnalité de scanner de VIN entièrement opérationnelle, tout en conservant l'intégrité de votre code HTML et CSS existant.
