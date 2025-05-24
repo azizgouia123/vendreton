@@ -54,7 +54,7 @@
 
         /* Hero Évaluation */
         .eval-hero {
-            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('1.png'); /* Ensure '1.png' is in the same directory or provide a full path */
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('1.png');
             background-size: cover;
             background-position: center;
             color: white;
@@ -408,11 +408,9 @@
             padding: 10px;
             min-height: 50px;
             align-items: center;
-            /* If no images, center the text */
             justify-content: center;
             color: var(--gray);
             font-size: 14px;
-            /* If no images, show placeholder text */
         }
         .image-preview-container:empty::before {
             content: "Aucune image sélectionnée.";
@@ -432,7 +430,7 @@
         .image-preview-item img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Crop to fit container */
+            object-fit: cover;
         }
 
         .delete-image-btn {
@@ -452,7 +450,7 @@
             cursor: pointer;
             opacity: 0.8;
             transition: opacity 0.2s ease-in-out;
-            z-index: 10; /* Ensure it's above the image */
+            z-index: 10;
         }
 
         .delete-image-btn:hover {
@@ -476,6 +474,39 @@
 
         #vin-decoder-results strong {
             color: var(--primary);
+        }
+
+        /* Scanner Modal */
+        .scanner-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scanner-video {
+            width: 90%;
+            max-width: 600px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .scanner-controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #scannerCloseBtn {
+            background-color: var(--secondary);
+            color: white;
+            padding: 12px 25px;
         }
 
         /* Responsive */
@@ -560,6 +591,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/@zxing/library@0.19.1"></script>
 </head>
 <body>
     <header class="eval-header">
@@ -601,7 +633,12 @@
                 <div class="form-grid">
                     <div class="form-group full-width">
                         <label for="vin">Numéro d'identification du véhicule (VIN) <i class="fas fa-question-circle" title="Le VIN se trouve généralement sur le tableau de bord (côté conducteur) ou sur l'étiquette de la porte."></i></label>
-                        <input type="text" id="vin" class="form-control" placeholder="Entrez le VIN de 17 caractères" maxlength="17" pattern="[A-HJ-NPR-Z0-9]{17}" title="Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)" required>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <input type="text" id="vin" class="form-control" placeholder="Entrez le VIN de 17 caractères" maxlength="17" pattern="[A-HJ-NPR-Z0-9]{17}" title="Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)" required style="flex: 1;">
+                            <button type="button" id="scanVinBtn" class="btn" title="Scanner avec la caméra">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                        </div>
                         <button type="button" id="decodeVinBtn" class="btn" style="margin-top: 10px;">Décoder le VIN</button>
                     </div>
 
@@ -1030,6 +1067,61 @@
             }
         });
 
+        // Scanner VIN
+        document.getElementById('scanVinBtn').addEventListener('click', async () => {
+            const codeReader = new ZXing.BrowserMultiFormatReader();
+            
+            const modal = document.createElement('div');
+            modal.className = 'scanner-modal';
+            
+            const video = document.createElement('video');
+            video.className = 'scanner-video';
+            video.setAttribute('playsinline', '');
+            
+            const controls = document.createElement('div');
+            controls.className = 'scanner-controls';
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.id = 'scannerCloseBtn';
+            closeBtn.className = 'btn';
+            closeBtn.innerHTML = '<i class="fas fa-times"></i> Fermer le scanner';
+            
+            modal.appendChild(video);
+            modal.appendChild(controls);
+            controls.appendChild(closeBtn);
+            document.body.appendChild(modal);
+
+            closeBtn.addEventListener('click', () => {
+                codeReader.reset();
+                modal.remove();
+            });
+
+            try {
+                const result = await codeReader.decodeFromVideoDevice(null, video, (result, err) => {
+                    if (result) {
+                        const scannedVin = result.text.toUpperCase();
+                        if (/^[A-HJ-NPR-Z0-9]{17}$/.test(scannedVin)) {
+                            document.getElementById('vin').value = scannedVin;
+                            codeReader.reset();
+                            modal.remove();
+                            document.getElementById('decodeVinBtn').click();
+                        } else {
+                            alert('Code scanné invalide. Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)');
+                        }
+                    }
+                    if (err && !(err instanceof ZXing.NotFoundException)) {
+                        console.error(err);
+                        alert(`Erreur de scan: ${err}`);
+                        modal.remove();
+                    }
+                });
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Accès à la caméra refusé ou appareil non supporté');
+                modal.remove();
+            }
+        });
+
         // Store uploaded images as Data URLs with unique IDs for deletion
         const uploadedImages = {
             'Exterieur': [],
@@ -1044,10 +1136,9 @@
             if (previewItem) {
                 previewItem.remove();
             }
-            // If no images left, display placeholder
             const previewContainer = document.getElementById(`${categoryId.toLowerCase()}-preview`);
             if (uploadedImages[categoryId].length === 0 && previewContainer.querySelector('.image-preview-item') === null) {
-                previewContainer.innerHTML = ''; // This will trigger the ::before pseudo-element
+                previewContainer.innerHTML = '';
             }
         }
 
@@ -1057,12 +1148,10 @@
             const maxFiles = parseInt(input.dataset.maxFiles, 10);
             const previewContainer = document.getElementById(`${category.toLowerCase()}-preview`);
 
-            // Handle file selection via click
             input.addEventListener('change', function(event) {
                 handleFiles(event.target.files, category, maxFiles, previewContainer);
             });
 
-            // Handle drag-and-drop
             uploadLabel.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 uploadLabel.classList.add('drag-over');
@@ -1080,7 +1169,6 @@
             });
 
             function handleFiles(files, categoryId, maxFiles, previewContainerElement) {
-                // Check current number of images vs. max limit
                 const currentImageCount = uploadedImages[categoryId].length;
                 let filesToAddCount = 0;
                 Array.from(files).forEach(file => {
@@ -1091,18 +1179,11 @@
 
                 if (currentImageCount + filesToAddCount > maxFiles) {
                     alert(`Vous ne pouvez télécharger qu'un maximum de ${maxFiles} photos pour la section "${categoryId}". Vous avez actuellement ${currentImageCount} photos.`);
-                    return; // Stop processing if limit exceeded
+                    return;
                 }
-
-                // Clear previous previews (if adding new set without explicitly deleting previous ones)
-                // If you want to *add* to existing, remove the following line:
-                // previewContainerElement.innerHTML = '';
-                // And instead, add a check for the current count.
-                // For this implementation, we will append, so we don't clear the container.
 
                 Array.from(files).forEach(file => {
                     if (file.type.startsWith('image/')) {
-                        // Check limit again for each file to ensure we don't exceed if user tries to add many
                         if (uploadedImages[categoryId].length >= maxFiles) {
                             console.warn(`Limit reached for ${categoryId}. Skipping file.`);
                             return;
@@ -1111,15 +1192,14 @@
                         const reader = new FileReader();
                         reader.onload = (e) => {
                             const imgDataUrl = e.target.result;
-                            const imageId = `img-${categoryId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // Unique ID
+                            const imageId = `img-${categoryId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
                             uploadedImages[categoryId].push({
                                 id: imageId,
                                 dataUrl: imgDataUrl,
-                                file: file // Store the original file object if needed later
+                                file: file
                             });
 
-                            // Create image preview item with delete button
                             const imgPreviewItem = document.createElement('div');
                             imgPreviewItem.className = 'image-preview-item';
                             imgPreviewItem.id = imageId;
@@ -1130,10 +1210,10 @@
 
                             const deleteBtn = document.createElement('button');
                             deleteBtn.className = 'delete-image-btn';
-                            deleteBtn.innerHTML = '&times;'; // HTML entity for 'x'
+                            deleteBtn.innerHTML = '&times;';
                             deleteBtn.title = 'Supprimer cette photo';
                             deleteBtn.onclick = (e) => {
-                                e.stopPropagation(); // Prevent triggering other events on the parent
+                                e.stopPropagation();
                                 deleteImage(categoryId, imageId);
                             };
 
@@ -1149,15 +1229,13 @@
             }
         });
 
-
         // Form submission logic for PDF generation
         document.getElementById('evaluationForm').addEventListener('submit', async function(event) {
-            event.preventDefault(); // Prevent default form submission
+            event.preventDefault();
 
-            // Basic validation
             if (!this.checkValidity()) {
                 alert("Veuillez remplir tous les champs obligatoires du formulaire.");
-                this.reportValidity(); // Show browser validation messages
+                this.reportValidity();
                 return;
             }
 
@@ -1166,25 +1244,22 @@
             submitBtn.textContent = 'Génération du PDF...';
 
             try {
-                // Initialize jsPDF
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
 
-                let yPos = 20; // Initial Y position
+                let yPos = 20;
 
-                // Add Title
                 doc.setFontSize(22);
-                doc.setTextColor(30, 30, 30); // var(--dark)
+                doc.setTextColor(30, 30, 30);
                 doc.text("Rapport d'Évaluation Véhicule", 105, yPos, { align: 'center' });
                 yPos += 15;
 
-                // Vehicle Information
                 doc.setFontSize(16);
-                doc.setTextColor(0, 86, 179); // var(--primary)
+                doc.setTextColor(0, 86, 179);
                 doc.text("Informations du Véhicule", 20, yPos);
                 yPos += 10;
                 doc.setDrawColor(0, 86, 179);
-                doc.line(20, yPos, 190, yPos); // Underline
+                doc.line(20, yPos, 190, yPos);
                 yPos += 10;
 
                 doc.setFontSize(12);
@@ -1210,7 +1285,7 @@
                 ];
 
                 vehicleInfo.forEach(info => {
-                    if (yPos > 280) { // Check for new page (A4 height is ~297mm)
+                    if (yPos > 280) {
                         doc.addPage();
                         yPos = 20;
                         doc.setFontSize(16);
@@ -1225,9 +1300,8 @@
                     doc.text(info, 20, yPos);
                     yPos += 7;
                 });
-                yPos += 10; // Add space after vehicle info
+                yPos += 10;
 
-                // Contact Information
                 doc.setFontSize(16);
                 doc.setTextColor(0, 86, 179);
                 if (yPos > 270) {
@@ -1271,7 +1345,6 @@
                 });
                 yPos += 10;
 
-                // Additional Comments
                 if (commentaires) {
                      if (yPos > 270) {
                         doc.addPage();
@@ -1307,7 +1380,6 @@
                     yPos += 10;
                 }
 
-                // Add Images
                 const imageCategories = ['Exterieur', 'Interieur', 'Dommages'];
                 for (const category of imageCategories) {
                     if (uploadedImages[category] && uploadedImages[category].length > 0) {
@@ -1330,8 +1402,8 @@
                         const imageHeight = 60;
                         const margin = 10;
 
-                        for (const imgObj of uploadedImages[category]) { // Iterate through the objects in the array
-                            const imgDataUrl = imgObj.dataUrl; // Get the dataUrl from the object
+                        for (const imgObj of uploadedImages[category]) {
+                            const imgDataUrl = imgObj.dataUrl;
 
                             if (yPos + imageHeight + margin > 290) {
                                 doc.addPage();
@@ -1362,7 +1434,6 @@
                     }
                 }
 
-                // Save the PDF
                 doc.save('Evaluation_Vehicule.pdf');
                 alert('Le rapport PDF a été généré et téléchargé!');
 
