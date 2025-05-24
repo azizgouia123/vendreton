@@ -1044,7 +1044,7 @@
                 const kilometrage = document.getElementById('kilometrage').value;
                 const transmission = document.getElementById('transmission').value;
                 const carburant = document.getElementById('carburant').value;
-                const etat = document.querySelector('input[name="etat"]:checked').value;
+                const etat = document.querySelector('input[name="etat"]:checked').value; // Récupère la valeur sélectionnée pour l'état
 
                 const vehicleInfo = [
                     `VIN: ${vin}`,
@@ -1054,7 +1054,7 @@
                     `Kilométrage: ${kilometrage} km`,
                     `Transmission: ${transmission}`,
                     `Type de carburant: ${carburant}`,
-                    `État général: ${etat}`
+                    `État général: ${etat}` // Ajout de l'état général
                 ];
 
                 vehicleInfo.forEach(info => {
@@ -1208,7 +1208,7 @@
                             }
                         }
                         // Ajuste yPos après l'ajout de toutes les images pour une catégorie
-                        // Si la dernière image n'a pas provoqué de saut de ligne, assurez un espace suffisant pour la section suivante
+                        // Si la dernière image n'a pas provoqué de saut de ligne, assure un espace suffisant pour la section suivante
                         if (xOffset !== 20) { // S'il y avait des images sur la dernière rangée
                            yPos += imageHeight + 20;
                         }
