@@ -13,9 +13,9 @@
             --light: #F8F9FA;
             --gray: #6C757D;
             --light-gray: #E9ECEF;
-            /* Added for scanner button colors to match index.html for consistency */
-            --vert-confiance: #2E8B57;
-            --rouge-alerte: #E31937;
+            /* Ajout/Confirmation des variables de couleur pour les boutons du scanner, cohérentes avec index.html */
+            --vert-confiance: #2E8B57; /* Vert pour succès/démarrage */
+            --rouge-alerte: #E31937; /* Rouge pour alerte/arrêt */
         }
 
         * {
@@ -43,7 +43,7 @@
             background-color: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             padding: 15px 0;
-            margin-bottom: 20px;
+            margin-bottom: 20px; /* Ajout d'une marge pour l'espacement */
         }
 
         .logo {
@@ -291,9 +291,9 @@
             border: none;
             cursor: pointer;
             font-weight: bold;
+            flex-grow: 1; /* Permet aux boutons de prendre la même largeur */
         }
 
-        /* Using --vert-confiance and --rouge-alerte from index.html for consistency */
         .scanner-controls .start-btn {
             background-color: var(--vert-confiance);
             color: white;
@@ -403,7 +403,7 @@
     </footer>
 
     <script>
-        const uploadedFiles = {}; // Stores files for PDF generation
+        const uploadedFiles = {}; // Stocke les fichiers pour la génération de PDF
 
         document.addEventListener('DOMContentLoaded', () => {
             const vinInput = document.getElementById('vin');
@@ -420,7 +420,7 @@
             const thumbnailContainer = document.getElementById('thumbnailContainer');
             const generatePdfBtn = document.getElementById('generatePdfBtn');
 
-            // --- QR/Barcode Scanner Logic ---
+            // --- Logique du scanner QR/Code-barres ---
             const startScannerBtn = document.getElementById('startScannerBtn');
             const stopScannerBtn = document.getElementById('stopScannerBtn');
             const qrReaderContainer = document.getElementById('qr-reader-container');
@@ -429,10 +429,10 @@
 
             function onScanSuccess(decodedText, decodedResult) {
                 console.log(`Code scanné = ${decodedText}`, decodedResult);
-                vinInput.value = decodedText.trim(); // Fill the VIN input
+                vinInput.value = decodedText.trim(); // Remplir l'entrée VIN
                 qrReaderResults.textContent = `VIN scanné: ${decodedText.trim()}`;
-                stopScanner(); // Stop the scanner automatically after a successful scan
-                decodeVinBtn.click(); // Trigger VIN decoding
+                stopScanner(); // Arrêter le scanner automatiquement après un scan réussi
+                decodeVinBtn.click(); // Déclencher le décodage du VIN
             }
 
             function onScanError(errorMessage) {
@@ -441,14 +441,18 @@
             }
 
             function startScanner() {
+                // Si un scanner est déjà actif, le nettoyer avant d'en créer un nouveau
                 if (html5QrcodeScanner) {
                     html5QrcodeScanner.clear().then(() => {
-                        html5QrcodeScanner = null;
-                        startScanner(); // Restart if already running
+                        html5QrcodeScanner = null; // Réinitialiser pour éviter les références obsolètes
+                        // On relance le scanner après un nettoyage réussi, pour être sûr
+                        startScanner();
                     }).catch(err => {
-                        console.error("Failed to clear html5QrcodeScanner", err);
+                        console.error("Échec du nettoyage du scanner Html5QrcodeScanner existant", err);
+                        // Continuer même en cas d'erreur de nettoyage pour tenter de lancer le scanner
+                        // Ou afficher un message à l'utilisateur
                     });
-                    return;
+                    return; // Empêcher le double lancement
                 }
                 
                 qrReaderContainer.style.display = 'block';
@@ -459,7 +463,7 @@
                 html5QrcodeScanner = new Html5QrcodeScanner(
                     "qr-reader",
                     { fps: 10, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true },
-                    false // disable creative mode
+                    false // désactiver le mode créatif
                 );
                 html5QrcodeScanner.render(onScanSuccess, onScanError);
             }
@@ -471,9 +475,9 @@
                         startScannerBtn.style.display = 'block';
                         stopScannerBtn.style.display = 'none';
                         qrReaderResults.textContent = '';
-                        html5QrcodeScanner = null;
+                        html5QrcodeScanner = null; // Vider la référence
                     }).catch(err => {
-                        console.error("Failed to clear html5QrcodeScanner", err);
+                        console.error("Échec du nettoyage du scanner Html5QrcodeScanner", err);
                     });
                 }
             }
@@ -481,7 +485,7 @@
             startScannerBtn.addEventListener('click', startScanner);
             stopScannerBtn.addEventListener('click', stopScanner);
 
-            // --- VIN Decoding Logic (Existing) ---
+            // --- Logique de décodage VIN (simplifiée) ---
             decodeVinBtn.addEventListener('click', async () => {
                 const vin = vinInput.value.trim().toUpperCase();
                 if (vin.length !== 17) {
@@ -490,61 +494,59 @@
                     return;
                 }
 
-                // Simulate API call for VIN decoding
-                // In a real application, you would send this VIN to a backend server
-                // which then calls a VIN decoding API (e.g., NHTSA, Edmunds, etc.)
-                // For this example, we'll use a simplified local decoding.
                 try {
-                    // This is a simplified local VIN decoding logic.
-                    // A real implementation would involve a server-side API call.
+                    // C'est une logique de décodage VIN locale simplifiée.
+                    // Une implémentation réelle impliquerait un appel d'API côté serveur à un service de décodage VIN.
                     const yearChar = vin[9];
                     let year = '';
+                    // Décodage basique de l'année (simplifié pour la démonstration)
                     if (yearChar >= 'A' && yearChar <= 'Y') {
+                        // Pour les VINs post-2000 qui utilisent des lettres pour l'année
+                        // Ex: A=2010, B=2011, ..., Y=2024
                         year = 2010 + (yearChar.charCodeAt(0) - 'A'.charCodeAt(0));
                     } else if (yearChar >= '1' && yearChar <= '9') {
+                        // Pour les VINs 2001-2009 (souvent des chiffres)
                         year = 2000 + parseInt(yearChar);
                     } else if (yearChar === '0') {
-                        year = 2010; // Example: '0' could map to 2010
+                        // '0' peut correspondre à 2000 ou 2010 selon la norme complète
+                        year = '2000 ou 2010'; // Valeur par défaut pour l'exemple
                     } else {
                         year = 'Non décodable';
                     }
 
-                    // Simple mock data based on common VIN patterns for demonstration
+                    // Données fictives simples basées sur des motifs VIN courants pour la démonstration
                     let make = 'Inconnue';
                     let model = 'Inconnu';
-                    let fuel = 'Essence'; // Fuel type is rarely directly in VIN
-                    let transmission = 'Automatique'; // Transmission type is rarely directly in VIN
+                    let fuel = 'Essence'; // Le type de carburant est rarement directement dans le VIN
+                    let transmission = 'Automatique'; // Le type de transmission est rarement directement dans le VIN
 
-                    if (vin.startsWith('1G')) { // General Motors (USA)
-                        make = 'Chevrolet';
+                    // Logique très simple pour la marque (WMI - World Manufacturer Identifier)
+                    const wmi = vin.substring(0, 3);
+                    if (wmi.startsWith('1G')) { make = 'General Motors (USA)'; }
+                    else if (wmi.startsWith('2G')) { make = 'General Motors (Canada)'; }
+                    else if (wmi.startsWith('3G')) { make = 'General Motors (Mexique)'; }
+                    else if (wmi.startsWith('JT')) { make = 'Toyota (Japon)'; }
+                    else if (wmi.startsWith('WDD')) { make = 'Mercedes-Benz'; }
+                    else if (wmi.startsWith('JM')) { make = 'Mazda (Japon)'; }
+                    else if (wmi.startsWith('5F')) { make = 'Honda (USA)'; }
+                    else if (wmi.startsWith('KF')) { make = 'Kia (Corée)'; }
+                    // Ajoutez d'autres WMI au besoin
+
+                    // Le décodage du modèle est beaucoup plus complexe et nécessiterait une base de données VIN complète.
+                    // Pour cet exemple, on reste simple.
+                    if (make.includes('Chevrolet')) {
                         if (vin.includes('CK')) model = 'Silverado';
                         else if (vin.includes('JB')) model = 'Malibu';
-                    } else if (vin.startsWith('JT')) { // Toyota (Japan)
-                        make = 'Toyota';
+                    } else if (make.includes('Toyota')) {
                         if (vin.includes('BE')) model = 'Camry';
                         else if (vin.includes('HF')) model = 'RAV4';
-                    } else if (vin.startsWith('WDD')) { // Mercedes-Benz (Germany)
-                        make = 'Mercedes-Benz';
-                        if (vin.includes('205')) model = 'Classe C';
-                    } else if (vin.startsWith('2G')) { // General Motors (Canada)
-                        make = 'GMC';
-                        if (vin.includes('BK')) model = 'Sierra';
-                    } else if (vin.startsWith('3VW')) { // Volkswagen (Mexico)
-                        make = 'Volkswagen';
-                        if (vin.includes('AZ')) model = 'Jetta';
-                    } else if (vin.startsWith('JM')) { // Mazda (Japan)
-                        make = 'Mazda';
-                        if (vin.includes('BP')) model = 'Mazda3';
-                    } else if (vin.startsWith('5FN')) { // Honda (USA, Alabama)
-                        make = 'Honda';
-                        if (vin.includes('RM')) model = 'CR-V';
                     }
 
                     decodedMarque.textContent = make;
                     decodedModele.textContent = model;
                     decodedAnnee.textContent = year;
-                    decodedCarburant.textContent = fuel; // This often cannot be decoded from VIN alone
-                    decodedTransmission.textContent = transmission; // This often cannot be decoded from VIN alone
+                    decodedCarburant.textContent = fuel;
+                    decodedTransmission.textContent = transmission;
                     vinResultsDiv.style.display = 'block';
 
                 } catch (error) {
@@ -554,21 +556,24 @@
                     decodedAnnee.textContent = 'Veuillez vérifier le numéro.';
                     decodedCarburant.textContent = '';
                     decodedTransmission.textContent = '';
-                    vinResultsDiv.style.display = 'block'; // Ensure box is visible for error
+                    vinResultsDiv.style.display = 'block'; // S'assurer que la boîte est visible pour l'erreur
                 }
             });
 
-            // --- File Upload Logic (Existing) ---
+            // --- Logique de téléchargement de fichiers ---
             fileDropArea.addEventListener('click', () => vehiclePhotosInput.click());
             fileDropArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
+                // Utilisation correcte de getComputedStyle pour les variables CSS
                 fileDropArea.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--primary');
             });
             fileDropArea.addEventListener('dragleave', () => {
+                // Utilisation correcte de getComputedStyle pour les variables CSS
                 fileDropArea.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--light-gray');
             });
             fileDropArea.addEventListener('drop', (e) => {
                 e.preventDefault();
+                // Utilisation correcte de getComputedStyle pour les variables CSS
                 fileDropArea.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--light-gray');
                 handleFiles(e.dataTransfer.files);
             });
@@ -604,9 +609,9 @@
                 }
             }
 
-            // --- PDF Generation Logic (Existing) ---
+            // --- Logique de génération de PDF ---
             document.getElementById('evaluationForm').addEventListener('submit', async function(event) {
-                event.preventDefault(); // Prevent default form submission
+                event.preventDefault(); // Empêche l'envoi par défaut du formulaire
 
                 const submitBtn = event.target.querySelector('#generatePdfBtn');
                 submitBtn.disabled = true;
@@ -616,13 +621,13 @@
                     const { jsPDF } = window.jspdf;
                     const doc = new jsPDF();
 
-                    // Vehicle Information
+                    // Informations sur le véhicule
                     doc.setFontSize(22);
-                    doc.setTextColor(0, 86, 179); // Primary blue
+                    doc.setTextColor(0, 86, 179); // Bleu primaire
                     doc.text("Rapport d'Évaluation Véhicule", 105, 20, null, null, "center");
 
                     doc.setFontSize(14);
-                    doc.setTextColor(51, 51, 51); // Dark gray
+                    doc.setTextColor(51, 51, 51); // Gris foncé
                     doc.text("Informations sur le Véhicule:", 20, 40);
 
                     const vehicleData = [
@@ -641,14 +646,14 @@
                         head: [['Champ', 'Valeur']],
                         body: vehicleData,
                         theme: 'grid',
-                        styles: { fillColor: [248, 249, 250] }, // light background
-                        headStyles: { fillColor: [0, 86, 179], textColor: 255 }, // blue header
+                        styles: { fillColor: [248, 249, 250] }, // fond clair
+                        headStyles: { fillColor: [0, 86, 179], textColor: 255 }, // en-tête bleu
                         margin: { left: 20, right: 20 }
                     });
 
                     let finalY = doc.lastAutoTable.finalY + 10;
 
-                    // Contact Information
+                    // Coordonnées
                     doc.text("Vos Coordonnées:", 20, finalY);
 
                     const contactData = [
@@ -671,16 +676,16 @@
 
                     finalY = doc.lastAutoTable.finalY + 20;
 
-                    // Photos (if any)
+                    // Photos (s'il y en a)
                     const imageIds = Object.keys(uploadedFiles);
                     if (imageIds.length > 0) {
-                        doc.addPage(); // Start new page for images
+                        doc.addPage(); // Nouvelle page pour les images
                         doc.setFontSize(14);
                         doc.text("Photos du Véhicule:", 20, 20);
                         let yPos = 30;
                         let xOffset = 20;
                         const imageWidth = 60;
-                        const imageHeight = 45; // Aspect ratio of a typical photo
+                        const imageHeight = 45; // Ratio d'aspect d'une photo typique
                         const margin = 10;
 
                         for (const id of imageIds) {
@@ -690,14 +695,15 @@
                             try {
                                 const img = new Image();
                                 img.src = dataURL;
-                                await new Promise(resolve => img.onload = resolve); // Ensure image is loaded
+                                // Attendre le chargement de l'image pour s'assurer que les dimensions sont correctes
+                                await new Promise(resolve => img.onload = resolve); 
 
-                                if (xOffset + imageWidth > doc.internal.pageSize.width - 20) { // If image goes beyond page width
-                                    xOffset = 20;
-                                    yPos += imageHeight + margin;
-                                    if (yPos + imageHeight > doc.internal.pageSize.height - 20) { // If image goes beyond page height
-                                        doc.addPage();
-                                        yPos = 20;
+                                if (xOffset + imageWidth > doc.internal.pageSize.width - 20) { // Si l'image dépasse la largeur de la page (20mm de marge)
+                                    xOffset = 20; // Réinitialiser X à la marge gauche
+                                    yPos += imageHeight + margin; // Passer à la ligne suivante
+                                    if (yPos + imageHeight > doc.internal.pageSize.height - 20) { // Si l'image dépasse la hauteur de la page
+                                        doc.addPage(); // Ajouter une nouvelle page
+                                        yPos = 20; // Réinitialiser Y pour la nouvelle page
                                         doc.setFontSize(14);
                                         doc.text("Photos du Véhicule (suite):", 20, 20);
                                         yPos = 30;
@@ -706,8 +712,8 @@
                                 doc.addImage(dataURL, 'JPEG', xOffset, yPos, imageWidth, imageHeight);
                                 xOffset += imageWidth + margin;
                             } catch (imgError) {
-                                console.error(`Error adding image to PDF for ID ${id}:`, imgError);
-                                // Fallback: add placeholder text if image fails to load
+                                console.error(`Erreur lors de l'ajout de l'image au PDF pour l'ID ${id}:`, imgError);
+                                // Fallback: ajouter un texte de remplacement si l'image ne se charge pas
                                 if (xOffset + imageWidth > doc.internal.pageSize.width - 20) {
                                     xOffset = 20;
                                     yPos += imageHeight + margin;
@@ -725,7 +731,7 @@
                         }
                     }
 
-                    // Save the PDF
+                    // Enregistrer le PDF
                     doc.save('Evaluation_Vehicule.pdf');
                     alert('Le rapport PDF a été généré et téléchargé!');
 
