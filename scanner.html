@@ -3,19 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <title>Scanner VIN</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body {
             font-family: 'Montserrat', sans-serif;
             text-align: center;
             padding: 20px;
         }
-        #scanner-container {
-            margin: 20px auto;
-            max-width: 600px;
-        }
-        video {
+        #reader {
             width: 100%;
-            border-radius: 8px;
+            max-width: 500px;
+            margin: auto;
+        }
+        #output {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
         }
         button {
             background-color: #E31937;
@@ -27,86 +30,48 @@
             cursor: pointer;
             margin: 10px;
         }
-        #output {
-            margin-top: 20px;
-            font-size: 18px;
-            font-weight: bold;
-        }
     </style>
-    <script src="https://unpkg.com/@zxing/library@0.19.1"></script>
 </head>
 <body>
     <h1>Scanner le VIN</h1>
-    <p>La caméra arrière est utilisée pour détecter le code VIN.</p>
-
-    <div id="scanner-container">
-        <video id="scanner-video" autoplay muted playsinline></video>
-    </div>
-
-    <button id="cancel-scan">Annuler</button>
-
-    <div id="output">En attente du scan...</div>
+    <div id="reader"></div>
+    <div id="output">En attente...</div>
+    <button id="stop-scan">Arrêter</button>
 
     <script>
-        const codeReader = new ZXing.BrowserMultiFormatReader();
-        const videoElem = document.getElementById('scanner-video');
-        const output = document.getElementById('output');
+        const output = document.getElementById("output");
+        const stopButton = document.getElementById("stop-scan");
+        const html5QrCode = new Html5Qrcode("reader");
 
-        async function startScanner() {
-            try {
-                const constraints = {
-                    video: {
-                        facingMode: { exact: "environment" }  // Caméra arrière
+        Html5Qrcode.getCameras().then(devices => {
+            const backCamera = devices.find(device => device.label.toLowerCase().includes("back")) || devices[0];
+
+            html5QrCode.start(
+                backCamera.id,
+                {
+                    fps: 10,
+                    qrbox: { width: 300, height: 200 }
+                },
+                (decodedText, decodedResult) => {
+                    const vin = decodedText.toUpperCase();
+                    output.innerText = `Scanné : ${vin}`;
+                    if (/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
+                        window.opener?.postMessage({ type: 'VIN_SCANNED', vin }, "*");
+                        html5QrCode.stop().then(() => window.close());
+                    } else {
+                        output.innerText = `Non valide : ${vin}`;
                     }
-                };
-
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                videoElem.srcObject = stream;
-
-                const track = stream.getVideoTracks()[0];
-                const deviceId = track.getSettings().deviceId;
-
-                codeReader.decodeFromVideoDevice(deviceId, videoElem, (result, err) => {
-                    if (result) {
-                        const scannedVin = result.text.toUpperCase();
-                        output.textContent = `Scanné : ${scannedVin}`;
-                        if (/^[A-HJ-NPR-Z0-9]{17}$/.test(scannedVin)) {
-                            window.opener?.postMessage({
-                                type: 'VIN_SCANNED',
-                                vin: scannedVin
-                            }, '*');
-                            codeReader.reset();
-                            stream.getTracks().forEach(track => track.stop());
-                            window.close();
-                        } else {
-                            output.textContent = 'Le code détecté n’est pas un VIN valide.';
-                        }
-                    }
-
-                    if (err && !(err instanceof ZXing.NotFoundException)) {
-                        console.error(err);
-                        output.textContent = `Erreur : ${err.message}`;
-                    }
-                });
-
-            } catch (error) {
-                console.error('Erreur d’accès à la caméra arrière :', error);
-                output.textContent = "Impossible d'accéder à la caméra arrière. Autorisation manquante ou caméra non disponible.";
-            }
-        }
-
-        document.getElementById('cancel-scan').addEventListener('click', () => {
-            codeReader.reset();
-            const stream = videoElem.srcObject;
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-            window.close();
+                },
+                error => {
+                    // On ne fait rien ici pour éviter de polluer avec les erreurs normales de scan
+                }
+            );
+        }).catch(err => {
+            output.innerText = `Erreur caméra : ${err}`;
         });
 
-        window.addEventListener('load', startScanner);
-        window.addEventListener('beforeunload', () => {
-            codeReader.reset();
+        stopButton.addEventListener("click", () => {
+            html5QrCode.stop().then(() => window.close());
         });
     </script>
 </body>
