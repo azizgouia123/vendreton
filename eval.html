@@ -1434,78 +1434,37 @@
             }
         });
 
-        // --- NOUVEAU CODE POUR LE SCANNER VIN ---
+        // --- CODE POUR LE SCANNER VIN ---
         const qrReaderContainer = document.getElementById('qr-reader-container');
         const scanVinBtn = document.getElementById('scanVinBtn');
         const stopScanBtn = document.getElementById('stopScanBtn');
         const vinInput = document.getElementById('vin');
         const qrReaderResults = document.getElementById('qr-reader-results');
 
-        let html5QrCode; // Déclarer la variable pour l'instance du scanner
+        let html5QrCode; // Déclarer la variable pour l'instance du scanner en dehors de la fonction pour la persistance
 
         scanVinBtn.addEventListener('click', () => {
             qrReaderContainer.style.display = 'block'; // Afficher le conteneur du scanner
             scanVinBtn.style.display = 'none'; // Cacher le bouton "Scanner"
             stopScanBtn.style.display = 'inline-block'; // Afficher le bouton "Arrêter"
 
-            if (!html5QrCode) {
+            if (!html5QrCode) { // Si le scanner n'est pas encore initialisé
                 html5QrCode = new Html5Qrcode("qr-reader");
             }
 
-            html5QrCode.start(
-                { facingMode: "environment" }, // Utilise la caméra arrière
-                {
-                    fps: 10,    // Taux de trames par seconde
-                    qrbox: { width: 250, height: 250 }  // Zone de numérisation
-                },
-                (decodedText, decodedResult) => {
-                    // Succès du scan
-                    qrReaderResults.textContent = `VIN Scanné: ${decodedText}`;
-                    vinInput.value = decodedText; // Mettre à jour le champ VIN
-                    stopScanner(); // Arrêter le scanner après un scan réussi
-                    // Déclencher le décodage VIN automatiquement après le scan
-                    document.getElementById('decodeVinBtn').click();
-                },
-                (errorMessage) => {
-                    // Échec du scan (peut être laissé vide ou pour le débogage)
-                    // console.log(`Scan Error: ${errorMessage}`);
-                }
-            ).catch((err) => {
-                console.error("Erreur de démarrage du scanner de code-barres:", err);
-                qrReaderResults.textContent = `Erreur de caméra: ${err}`;
-                alert(`Erreur lors du démarrage du scanner: ${err.message}. Veuillez vérifier les permissions de la caméra.`);
-                stopScanner();
-            });
-        });
+            // Assurez-vous que le scanner n'est pas déjà en cours avant de le démarrer
+            if (!html5QrCode.is == 'eval.html' src = "https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>` était tronqué. J'ai corrigé cela pour que la balise de script soit complète et que le script se ferme correctement.
+2.  **Correction de la condition `if (!html5QrCode.is`** : La condition était incomplète (`if (!html5QrCode.is`). Elle a été corrigée pour être `if (!html5QrCode.is=)` ou pour vérifier l'état du scanner. La bonne façon de vérifier si le scanner est déjà démarré est d'utiliser `html5QrCode.getState() === Html5Qrcode.Html5QrcodeScannerState.SCANNING`. J'ai opté pour une approche plus simple en m'assurant que `html5QrCode` existe avant de le démarrer, et en gérant l'arrêt avant un nouveau démarrage si nécessaire.
 
-        stopScanBtn.addEventListener('click', () => {
-            stopScanner();
-        });
+Ces corrections devraient permettre au scanner de se lancer correctement lorsque vous appuyez sur le bouton "Scanner le VIN".
 
-        function stopScanner() {
-            if (html5QrCode && html5QrCode.is="eval.html" src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>`.
-2.  **Styles pour le scanner** :
-    J'ai ajouté des styles spécifiques pour les éléments du scanner (`#qr-reader-container`, `#qr-reader`, `#qr-reader-results`, `#scanVinBtn`, `#stopScanBtn`) pour les rendre visibles et fonctionnels.
-3.  **Structure HTML pour le scanner** :
-    Un `div` avec l'ID `qr-reader-container` est inséré juste après le champ VIN pour contenir l'interface du scanner. Il est initialement caché (`display: none;`).
-    ```html
-    <div id="qr-reader-container" class="full-width">
-        <h4>Scanner de VIN</h4>
-        <p>Placez le code-barres VIN ou le QR code devant votre caméra.</p>
-        <div id="qr-reader" style="width: 100%; max-width: 400px; margin: 15px auto;"></div>
-        <div id="qr-reader-results"></div>
-        <button type="button" id="stopScanBtn" class="btn">Arrêter le scan</button>
-    </div>
-    ```
-4.  **Boutons de contrôle du scanner** :
-    Un bouton "Scanner le VIN" (`id="scanVinBtn"`) a été ajouté à côté du bouton "Décoder le VIN" existant pour activer le scanner. Un bouton "Arrêter le scan" (`id="stopScanBtn"`) est également inclus pour le désactiver.
-5.  **Logique JavaScript du scanner** :
-    J'ai ajouté un nouveau bloc de script à la fin de votre section `<script>` existante. Ce bloc gère l'initialisation et le contrôle de `html5-qrcode`.
-    * `html5QrCode` est déclaré pour contenir l'instance du scanner.
-    * L'événement `click` sur `scanVinBtn` affiche le conteneur du scanner, cache le bouton "Scanner", affiche le bouton "Arrêter" et démarre le scanner en utilisant `html5QrCode.start()`.
-    * `onScanSuccess` est la fonction appelée lorsque le VIN est scanné. Elle met à jour le champ VIN, affiche le résultat, et appelle `stopScanner()`.
-    * `onScanFailure` est inclus pour la gestion des erreurs de scan.
-    * `stopScanBtn` a un événement `click` qui appelle la fonction `stopScanner()`.
-    * La fonction `stopScanner()` arrête le flux de la caméra, cache le conteneur du scanner et affiche le bouton "Scanner".
+**Pour tester :**
 
-Ces modifications devraient vous fournir une fonctionnalité de scanner de VIN entièrement opérationnelle, tout en conservant l'intégrité de votre code HTML et CSS existant.
+1.  Enregistrez le code ci-dessus dans votre fichier `eval.html`.
+2.  Ouvrez `eval.html` dans un navigateur moderne (Chrome, Firefox, Edge, Safari).
+3.  Cliquez sur le bouton "Scanner le VIN".
+4.  Le navigateur devrait vous demander la permission d'accéder à votre caméra. Acceptez.
+5.  Le flux vidéo de votre caméra devrait apparaître dans le conteneur du scanner.
+6.  Placez un code-barres VIN ou un QR code devant la caméra. Une fois scanné, le champ VIN devrait se remplir et le scanner s'arrêter.
+
+Si le problème persiste, veuillez vérifier la console de développement de votre navigateur (généralement accessible en appuyant sur F12) pour toute erreur JavaScript. Ces messages d'erreur sont cruciaux pour diagnostiquer ce qui ne va pas.
