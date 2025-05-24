@@ -933,23 +933,12 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // VIN Decoder Logic
-        document.getElementById('decodeVinBtn').addEventListener('click', async function() {
-            const vinInput = document.getElementById('vin');
-            const vin = vinInput.value.trim().toUpperCase();
-
-            const vinResultsDiv = document.getElementById('vin-decoder-results');
-            const decodedMarque = document.getElementById('decodedMarque');
-            const decodedModele = document.getElementById('decodedModele');
-            const decodedAnnee = document.getElementById('decodedAnnee');
-            const decodedCarburant = document.getElementById('decodedCarburant');
-            const decodedTransmission = document.getElementById('decodedTransmission');
-
-            if (vin.length !== 17 || !/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
-                alert('Veuillez entrer un VIN valide de 17 caractères (sans les lettres I, O, Q).');
-                vinResultsDiv.style.display = 'none';
-                return;
-            }
+        document.getElementById('scanVinBtn').addEventListener('click', () => {
+    // Stocker la page actuelle pour y revenir après le scan
+    localStorage.setItem('returnUrl', window.location.href);
+    // Rediriger vers la page de scan
+    window.location.href = 'scanner.html';
+});
 
             vinResultsDiv.style.display = 'block';
             decodedMarque.textContent = 'Décodage en cours...';
