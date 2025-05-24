@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Scanner VIN amélioré</title>
+  <title>Scanner VIN avec caméra arrière forcée</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
   <style>
@@ -90,29 +90,53 @@
 
     const html5QrCode = new Html5Qrcode("reader");
 
+    // Trouver la caméra arrière via enumerateDevices + facingMode (si dispo)
+    async function getBackCameraId() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        throw new Error("API enumerateDevices non supportée");
+      }
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      
+      // Première recherche : caméra avec label contenant "back", "rear", "environment"
+      let backCam = videoDevices.find(device =>
+        device.label.toLowerCase().includes("back") ||
+        device.label.toLowerCase().includes("rear") ||
+        device.label.toLowerCase().includes("environment")
+      );
+
+      if (backCam) return backCam.deviceId;
+
+      // Sinon, tenter d'ouvrir caméra en mode environment (via constraints) pour récupérer deviceId
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: "environment" } }
+        });
+        const track = stream.getVideoTracks()[0];
+        const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+        const deviceId = track.getSettings().deviceId || null;
+        track.stop();
+        if (deviceId) return deviceId;
+      } catch(e) {
+        // fallback
+      }
+
+      // Dernier recours : retourner la première caméra dispo
+      if (videoDevices.length > 0) return videoDevices[0].deviceId;
+
+      throw new Error("Aucune caméra vidéo trouvée");
+    }
+
     async function startScanner() {
       try {
-        const devices = await Html5Qrcode.getCameras();
-        if (!devices || devices.length === 0) {
-          status.textContent = "❌ Aucune caméra détectée";
-          return;
-        }
+        const backCameraId = await getBackCameraId();
 
-        // Caméra arrière : recherche par label et fallback au premier
-        let backCamera = devices.find(cam =>
-          cam.label.toLowerCase().includes("back") ||
-          cam.label.toLowerCase().includes("rear") ||
-          cam.label.toLowerCase().includes("environment")
-        );
-        if (!backCamera) backCamera = devices[0];
-
-        // Options de scan : fps 10, zone rectangulaire plus large pour VIN horizontal
         await html5QrCode.start(
-          backCamera.id,
+          backCameraId,
           {
             fps: 10,
-            qrbox: { width: 320, height: 100 }, 
-            experimentalFeatures: { useBarCodeDetectorIfSupported: true } // pour meilleure détection
+            qrbox: { width: 320, height: 100 },
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true }
           },
           decodedText => {
             const vin = decodedText.trim().toUpperCase();
@@ -120,21 +144,21 @@
 
             if (/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
               status.textContent = "✅ VIN valide";
-              status.style.color = "#1a7f37"; // vert
+              status.style.color = "#1a7f37";
             } else {
               status.textContent = "⚠️ VIN invalide (17 caractères sans I,O,Q)";
-              status.style.color = "#b24343"; // rouge
+              status.style.color = "#b24343";
             }
           },
           errorMessage => {
-            // ici on ignore les erreurs classiques de scan (pas trouvé, etc)
+            // Erreurs classiques ignorées
           }
         );
 
         status.textContent = "🎯 Scan en cours... Positionnez le VIN devant la caméra arrière.";
         status.style.color = "#666";
       } catch (err) {
-        status.textContent = `Erreur caméra: ${err}`;
+        status.textContent = `Erreur caméra: ${err.message || err}`;
         status.style.color = "#b24343";
       }
     }
