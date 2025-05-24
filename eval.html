@@ -13,6 +13,9 @@
             --light: #F8F9FA;
             --gray: #6C757D;
             --light-gray: #E9ECEF;
+            /* Added for scanner button colors to match index.html for consistency */
+            --vert-confiance: #2E8B57;
+            --rouge-alerte: #E31937;
         }
 
         * {
@@ -290,17 +293,16 @@
             font-weight: bold;
         }
 
+        /* Using --vert-confiance and --rouge-alerte from index.html for consistency */
         .scanner-controls .start-btn {
-            background-color: var(--vert-confiance); /* Green */
+            background-color: var(--vert-confiance);
             color: white;
         }
 
         .scanner-controls .stop-btn {
-            background-color: var(--rouge-alerte); /* Red */
+            background-color: var(--rouge-alerte);
             color: white;
         }
-
-
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/jspdf-autotable@3.5.25/dist/jspdf.plugin.autotable.js"></script>
@@ -510,8 +512,8 @@
                     // Simple mock data based on common VIN patterns for demonstration
                     let make = 'Inconnue';
                     let model = 'Inconnu';
-                    let fuel = 'Essence';
-                    let transmission = 'Automatique';
+                    let fuel = 'Essence'; // Fuel type is rarely directly in VIN
+                    let transmission = 'Automatique'; // Transmission type is rarely directly in VIN
 
                     if (vin.startsWith('1G')) { // General Motors (USA)
                         make = 'Chevrolet';
@@ -538,16 +540,6 @@
                         if (vin.includes('RM')) model = 'CR-V';
                     }
 
-                    // A very basic attempt at transmission based on common patterns
-                    // This is highly unreliable without a proper decoding database
-                    if (vin.includes('AUTO') || vin.includes('AU')) { // Highly unlikely to be in VIN
-                        transmission = 'Automatique';
-                    } else if (vin.includes('MAN')) { // Highly unlikely to be in VIN
-                        transmission = 'Manuelle';
-                    } else {
-                        transmission = 'Autre'; // Default if no clear match
-                    }
-
                     decodedMarque.textContent = make;
                     decodedModele.textContent = model;
                     decodedAnnee.textContent = year;
@@ -570,14 +562,14 @@
             fileDropArea.addEventListener('click', () => vehiclePhotosInput.click());
             fileDropArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                fileDropArea.style.borderColor = var(--primary);
+                fileDropArea.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--primary');
             });
             fileDropArea.addEventListener('dragleave', () => {
-                fileDropArea.style.borderColor = var(--light-gray);
+                fileDropArea.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--light-gray');
             });
             fileDropArea.addEventListener('drop', (e) => {
                 e.preventDefault();
-                fileDropArea.style.borderColor = var(--light-gray);
+                fileDropArea.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--light-gray');
                 handleFiles(e.dataTransfer.files);
             });
             vehiclePhotosInput.addEventListener('change', (e) => {
@@ -700,7 +692,7 @@
                                 img.src = dataURL;
                                 await new Promise(resolve => img.onload = resolve); // Ensure image is loaded
 
-                                if (xOffset + imageWidth > 190) { // If image goes beyond page width
+                                if (xOffset + imageWidth > doc.internal.pageSize.width - 20) { // If image goes beyond page width
                                     xOffset = 20;
                                     yPos += imageHeight + margin;
                                     if (yPos + imageHeight > doc.internal.pageSize.height - 20) { // If image goes beyond page height
@@ -716,7 +708,7 @@
                             } catch (imgError) {
                                 console.error(`Error adding image to PDF for ID ${id}:`, imgError);
                                 // Fallback: add placeholder text if image fails to load
-                                if (xOffset + imageWidth > 190) {
+                                if (xOffset + imageWidth > doc.internal.pageSize.width - 20) {
                                     xOffset = 20;
                                     yPos += imageHeight + margin;
                                     if (yPos + imageHeight > doc.internal.pageSize.height - 20) {
