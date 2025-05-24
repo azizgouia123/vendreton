@@ -329,6 +329,37 @@
             font-size: 12px;
         }
 
+        .photo-thumbnail {
+            /* Placeholder for images - these CSS rules ensure they display a solid background if image fails */
+            background-color: #ccc; /* fallback color */
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+            min-height: 100px; /* ensure minimum height for thumbnails */
+            display: flex; /* use flex to center content if no image */
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .photo-badge {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background-color: var(--secondary);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
         .photo-details {
             padding: 12px;
         }
@@ -478,56 +509,28 @@
             color: var(--primary);
         }
 
-        /* Styles for VIN Scanner */
         #qr-reader-container {
             margin-top: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            background-color: var(--light-gray);
             text-align: center;
             display: none; /* Hidden by default */
         }
 
         #qr-reader {
             width: 100%;
-            max-width: 400px; /* Adjust as needed */
+            max-width: 400px;
             margin: 0 auto;
-            border: 1px solid var(--primary);
+            border: 1px solid #ddd;
             border-radius: 5px;
-            overflow: hidden; /* Hide overflow of video stream */
         }
 
-        #qr-reader-results {
-            margin-top: 10px;
-            font-weight: bold;
-            color: var(--primary);
-        }
-
-        #scanVinBtn, #stopScanBtn {
-            margin-top: 10px;
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+        .close-scanner-btn {
+            margin-top: 15px;
+            background-color: var(--gray);
             font-size: 16px;
-            transition: background-color 0.3s;
+            padding: 10px 20px;
         }
-
-        #scanVinBtn:hover, #stopScanBtn:hover {
-            background-color: #004494;
-        }
-
-        #stopScanBtn {
-            background-color: var(--secondary);
-            margin-left: 10px;
-            display: none; /* Hidden by default */
-        }
-        #stopScanBtn:hover {
-            background-color: #C0112B;
+        .close-scanner-btn:hover {
+            background-color: #5a6268;
         }
 
 
@@ -613,7 +616,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
     <header class="eval-header">
@@ -656,18 +659,14 @@
                     <div class="form-group full-width">
                         <label for="vin">Numéro d'identification du véhicule (VIN) <i class="fas fa-question-circle" title="Le VIN se trouve généralement sur le tableau de bord (côté conducteur) ou sur l'étiquette de la porte."></i></label>
                         <input type="text" id="vin" class="form-control" placeholder="Entrez le VIN de 17 caractères" maxlength="17" pattern="[A-HJ-NPR-Z0-9]{17}" title="Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)" required>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                            <button type="button" id="decodeVinBtn" class="btn" style="flex-grow: 1; margin-right: 10px;">Décoder le VIN</button>
-                            <button type="button" id="scanVinBtn" class="btn" style="flex-grow: 1; background-color: var(--primary);">Scanner le VIN <i class="fas fa-barcode"></i></button>
-                        </div>
+                        <button type="button" id="startScannerBtn" class="btn" style="margin-top: 10px;"><i class="fas fa-qrcode"></i> Scanner le VIN (Caméra)</button>
+                        <button type="button" id="decodeVinBtn" class="btn" style="margin-top: 10px; margin-left: 10px;">Décoder le VIN (Manuel)</button>
                     </div>
 
                     <div id="qr-reader-container" class="full-width">
-                        <h4>Scanner de VIN</h4>
-                        <p>Placez le code-barres VIN ou le QR code devant votre caméra.</p>
-                        <div id="qr-reader" style="width: 100%; max-width: 400px; margin: 15px auto;"></div>
-                        <div id="qr-reader-results"></div>
-                        <button type="button" id="stopScanBtn" class="btn">Arrêter le scan</button>
+                        <h4>Scannez le code-barres VIN</h4>
+                        <div id="qr-reader"></div>
+                        <button type="button" id="closeScannerBtn" class="btn close-scanner-btn">Fermer le scanner</button>
                     </div>
 
                     <div id="vin-decoder-results" class="full-width">
@@ -790,28 +789,28 @@
                                 <p>Veuillez prendre des photos claires de tous les angles de votre véhicule.</p>
                                 <div class="photo-examples-grid">
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Avant%203/4');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('./images/placeholder_front34.png');"></div>
                                         <div class="photo-details">
                                             <h5>Avant 3/4</h5>
                                             <p>Montrant l'avant et le côté.</p>
                                         </div>
                                     </div>
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Arrière%203/4');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('./images/placeholder_rear34.png');"></div>
                                         <div class="photo-details">
                                             <h5>Arrière 3/4</h5>
                                             <p>Montrant l'arrière et le côté.</p>
                                         </div>
                                     </div>
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Côté%20(Droit)');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('./images/placeholder_side_right.png');"></div>
                                         <div class="photo-details">
                                             <h5>Côté (Droit)</h5>
                                             <p>Vue latérale complète.</p>
                                         </div>
                                     </div>
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Côté%20(Gauche)');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('./images/placeholder_side_left.png');"></div>
                                         <div class="photo-details">
                                             <h5>Côté (Gauche)</h5>
                                             <p>Autre vue latérale complète.</p>
@@ -836,28 +835,28 @@
                                 <p>Veuillez prendre des photos claires du tableau de bord, des sièges avant et arrière.</p>
                                 <div class="photo-examples-grid">
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Tableau%20de%20bord');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('./images/placeholder_dashboard.png');"></div>
                                         <div class="photo-details">
                                             <h5>Tableau de bord</h5>
                                             <p>Vue complète du tableau de bord.</p>
                                         </div>
                                     </div>
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Sièges%20Avant');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('./images/placeholder_front_seats.png');"></div>
                                         <div class="photo-details">
                                             <h5>Sièges Avant</h5>
                                             <p>Les deux sièges avant en entier.</p>
                                         </div>
                                     </div>
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Sièges%20Arrière');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('./images/placeholder_rear_seats.png');"></div>
                                         <div class="photo-details">
                                             <h5>Sièges Arrière</h5>
                                             <p>La banquette arrière en entier.</p>
                                         </div>
                                     </div>
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Odomètre');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('./images/placeholder_odometer.png');"></div>
                                         <div class="photo-details">
                                             <h5>Odomètre</h5>
                                             <p>Lecture claire du kilométrage.</p>
@@ -948,12 +947,77 @@
             });
         });
 
-        // VIN Decoder Logic
-        document.getElementById('decodeVinBtn').addEventListener('click', async function() {
-            const vinInput = document.getElementById('vin');
+        // VIN Scanner & Decoder Logic
+        let html5QrCode = null; // Declare a variable to hold the Html5QrcodeScanner instance
+
+        const startScannerBtn = document.getElementById('startScannerBtn');
+        const closeScannerBtn = document.getElementById('closeScannerBtn');
+        const qrReaderContainer = document.getElementById('qr-reader-container');
+        const vinInput = document.getElementById('vin');
+        const vinResultsDiv = document.getElementById('vin-decoder-results');
+        const decodeVinBtn = document.getElementById('decodeVinBtn');
+
+        startScannerBtn.addEventListener('click', startScanner);
+        closeScannerBtn.addEventListener('click', stopScanner);
+        decodeVinBtn.addEventListener('click', decodeVin); // Keep the manual decode button
+
+        function startScanner() {
+            qrReaderContainer.style.display = 'block';
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("qr-reader");
+            }
+
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length) {
+                    const cameraId = devices[0].id; // Use the first camera found
+                    html5QrCode.start(
+                        cameraId, {
+                            fps: 10, // Frames per second
+                            qrbox: { width: 250, height: 150 } // Size of the scanning box
+                        },
+                        (decodedText, decodedResult) => {
+                            // onDecodeSuccess
+                            vinInput.value = decodedText.trim().toUpperCase();
+                            decodeVin(); // Decode the scanned VIN
+                            stopScanner(); // Stop the scanner after successful scan
+                        },
+                        (errorMessage) => {
+                            // onError (optional) - you can log or display scan errors
+                            console.warn(`QR Code Scan Error: ${errorMessage}`);
+                        }
+                    ).catch((err) => {
+                        console.error(`Unable to start scanning: ${err}`);
+                        alert('Impossible de démarrer le scanner. Assurez-vous d\'avoir une caméra connectée et d\'accorder la permission.');
+                        stopScanner();
+                    });
+                } else {
+                    alert("Aucune caméra trouvée pour le scan de VIN.");
+                    stopScanner();
+                }
+            }).catch(err => {
+                console.error(`Error getting camera devices: ${err}`);
+                alert("Erreur lors de l'accès aux caméras.");
+                stopScanner();
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.is	Scanning) {
+                html5QrCode.stop().then(() => {
+                    console.log("QR Code scanner stopped.");
+                    qrReaderContainer.style.display = 'none';
+                }).catch((err) => {
+                    console.error("Error stopping the scanner:", err);
+                    qrReaderContainer.style.display = 'none'; // Ensure it hides even on error
+                });
+            } else {
+                qrReaderContainer.style.display = 'none';
+            }
+        }
+
+        async function decodeVin() {
             const vin = vinInput.value.trim().toUpperCase();
 
-            const vinResultsDiv = document.getElementById('vin-decoder-results');
             const decodedMarque = document.getElementById('decodedMarque');
             const decodedModele = document.getElementById('decodedModele');
             const decodedAnnee = document.getElementById('decodedAnnee');
@@ -1093,7 +1157,8 @@
                 decodedTransmission.textContent = '';
                 vinResultsDiv.style.display = 'block';
             }
-        });
+        }
+
 
         // Store uploaded images as Data URLs with unique IDs for deletion
         const uploadedImages = {
@@ -1158,12 +1223,6 @@
                     alert(`Vous ne pouvez télécharger qu'un maximum de ${maxFiles} photos pour la section "${categoryId}". Vous avez actuellement ${currentImageCount} photos.`);
                     return; // Stop processing if limit exceeded
                 }
-
-                // Clear previous previews (if adding new set without explicitly deleting previous ones)
-                // If you want to *add* to existing, remove the following line:
-                // previewContainerElement.innerHTML = '';
-                // And instead, add a check for the current count.
-                // For this implementation, we will append, so we don't clear the container.
 
                 Array.from(files).forEach(file => {
                     if (file.type.startsWith('image/')) {
@@ -1439,114 +1498,6 @@
                 submitBtn.textContent = 'Générer l\'évaluation PDF';
             }
         });
-
-        // --- CODE POUR LE SCANNER VIN ---
-        const qrReaderContainer = document.getElementById('qr-reader-container');
-        const scanVinBtn = document.getElementById('scanVinBtn');
-        const stopScanBtn = document.getElementById('stopScanBtn');
-        const vinInput = document.getElementById('vin');
-        const qrReaderResults = document.getElementById('qr-reader-results');
-
-        let html5QrCode; // Déclarer la variable pour l'instance du scanner en dehors de la fonction pour la persistance
-
-        function onScanSuccess(decodedText, decodedResult) {
-            console.log(`Code scanné = ${decodedText}`, decodedResult);
-            vinInput.value = decodedText; // Remplir le champ VIN avec le résultat
-            qrReaderResults.textContent = `VIN scanné: ${decodedText}`; // Afficher le résultat
-            stopScanner(); // Arrêter le scanner après un scan réussi
-            
-            // Tenter de décoder le VIN après le scan
-            document.getElementById('decodeVinBtn').click();
-        }
-
-        function onScanError(errorMessage) {
-            // console.warn(`Erreur de scan: ${errorMessage}`); // Pour le débogage
-            qrReaderResults.textContent = `Erreur de scan: ${errorMessage}`;
-        }
-
-        function startScanner() {
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("qr-reader");
-            }
-            // Configuration de l'appareil (caméra arrière si disponible)
-            const qrCodeConfig = {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                supportedScanTypes: [
-                    Html5QrcodeSupportedScanTypes.QR_CODE,
-                    Html5QrcodeSupportedScanTypes.AZTEC, // VINs can be Aztec codes
-                    Html5QrcodeSupportedScanTypes.CODE_39, // VINs can be Code 39
-                    Html5QrcodeSupportedScanTypes.CODE_93,
-                    Html5QrcodeSupportedScanTypes.CODE_128,
-                    Html5QrcodeSupportedScanTypes.DATA_MATRIX
-                ]
-            };
-
-            Html5Qrcode.getCameras().then(devices => {
-                if (devices && devices.length) {
-                    // Utiliser la caméra arrière si disponible, sinon la première disponible
-                    const rearCamera = devices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('arrière'));
-                    const cameraId = rearCamera ? rearCamera.id : devices[0].id;
-
-                    html5QrCode.start(
-                        cameraId,
-                        qrCodeConfig,
-                        onScanSuccess,
-                        onScanError
-                    ).then(() => {
-                        qrReaderResults.textContent = "Scanner démarré. Veuillez placer le VIN devant la caméra.";
-                        qrReaderContainer.style.display = 'block';
-                        scanVinBtn.style.display = 'none';
-                        stopScanBtn.style.display = 'inline-block';
-                    }).catch(err => {
-                        qrReaderResults.textContent = `Erreur lors du démarrage du scanner: ${err}. Veuillez vérifier les permissions de la caméra.`;
-                        console.error('Erreur de démarrage du scanner:', err);
-                        qrReaderContainer.style.display = 'none'; // Cacher en cas d'échec grave
-                        scanVinBtn.style.display = 'inline-block';
-                        stopScanBtn.style.display = 'none';
-                    });
-                } else {
-                    qrReaderResults.textContent = "Aucune caméra détectée.";
-                    console.error("Aucune caméra détectée.");
-                    qrReaderContainer.style.display = 'none';
-                    scanVinBtn.style.display = 'inline-block';
-                    stopScanBtn.style.display = 'none';
-                }
-            }).catch(err => {
-                qrReaderResults.textContent = `Erreur lors de l'accès aux caméras: ${err}. Assurez-vous d'avoir accordé les permissions.`;
-                console.error('Erreur lors de la récupération des caméras:', err);
-                qrReaderContainer.style.display = 'none';
-                scanVinBtn.style.display = 'inline-block';
-                stopScanBtn.style.display = 'none';
-            });
-        }
-
-        function stopScanner() {
-            if (html5QrCode && html5QrCode.getState() === Html5Qrcode.Html5QrcodeScannerState.SCANNING) {
-                html5QrCode.stop().then(() => {
-                    qrReaderResults.textContent = "Scanner arrêté.";
-                    qrReaderContainer.style.display = 'none'; // Cacher le conteneur du scanner
-                    scanVinBtn.style.display = 'inline-block'; // Afficher le bouton "Scanner"
-                    stopScanBtn.style.display = 'none'; // Cacher le bouton "Arrêter"
-                }).catch((err) => {
-                    console.error("Erreur lors de l'arrêt du scanner:", err);
-                    qrReaderResults.textContent = `Erreur lors de l'arrêt du scanner: ${err}`;
-                });
-            } else {
-                console.log("Le scanner n'est pas actif ou n'a pas été initialisé.");
-                qrReaderContainer.style.display = 'none';
-                scanVinBtn.style.display = 'inline-block';
-                stopScanBtn.style.display = 'none';
-            }
-        }
-
-        scanVinBtn.addEventListener('click', startScanner);
-        stopScanBtn.addEventListener('click', stopScanner);
-
-        // Initial state: hide scanner container and stop button
-        qrReaderContainer.style.display = 'none';
-        stopScanBtn.style.display = 'none';
-        // End of VIN Scanner Code
     </script>
 </body>
 </html>
