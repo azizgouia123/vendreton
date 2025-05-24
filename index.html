@@ -3,698 +3,929 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VendreTonAutoRapide.ca | Vente express de véhicules au Québec</title>
+    <title>Évaluation Express | VendreTonAutoRapide.ca</title>
     <style>
-        /* CSS Québec Modern */
         :root {
-            --bleu-qc: #0056B3;
-            --rouge-alerte: #E31937;
-            --vert-confiance: #2E8B57;
-            --gris-fonce: #333333;
-            --gris-clair: #F5F5F5;
+            --primary: #0056B3; /* Bleu Québec */
+            --secondary: #E31937; /* Rouge Alerte */
+            --accent: #FFC72C; /* Or */
+            --dark: #1A1A1A;
+            --light: #F8F9FA;
+            --gray: #6C757D;
+            --light-gray: #E9ECEF;
         }
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Montserrat', Arial, sans-serif;
         }
-        
+
         body {
+            background-color: var(--light);
+            color: var(--dark);
             line-height: 1.6;
-            color: var(--gris-fonce);
-            background: var(--gris-clair);
         }
-        
+
         .container {
             width: 90%;
             max-width: 1200px;
             margin: 0 auto;
+            padding: 20px 0;
         }
-        
-        /* Header Québec Style */
-        header {
-            background: white;
-            border-bottom: 3px solid var(--bleu-qc);
+
+        /* Header */
+        .eval-header {
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             padding: 15px 0;
         }
-        
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap; /* Permet aux éléments de passer à la ligne */
-        }
-        
+
         .logo {
             font-size: 28px;
             font-weight: 800;
-            color: var(--bleu-qc);
-            white-space: nowrap; /* Empêche le logo de se couper */
-        }
-        
-        .logo span {
-            color: var(--rouge-alerte);
-        }
-        
-        .nav-links {
-            display: flex; /* Utilise flexbox pour les liens de navigation */
-            flex-wrap: wrap; /* Permet aux liens de passer à la ligne si nécessaire */
-            justify-content: flex-end; /* Aligne les liens à droite */
-            align-items: center;
+            color: var(--primary);
         }
 
-        .nav-links a {
-            margin-left: 20px; /* Légèrement réduit pour plus d'espace */
-            text-decoration: none;
-            color: var(--gris-fonce);
-            font-weight: 600;
-            font-size: 15px; /* Légèrement réduit pour les écrans */
-            transition: all 0.3s;
-            white-space: nowrap; /* Empêche les liens de se couper */
+        .logo span {
+            color: var(--secondary);
         }
-        
-        .nav-links a:hover {
-            color: var(--bleu-qc);
-        }
-        
-        .nav-links .btn-nav {
-            background: var(--rouge-alerte);
-            color: white;
-            padding: 8px 18px; /* Réduit le padding du bouton */
-            border-radius: 5px;
-            font-size: 15px; /* Adapte la taille de la police */
-            margin-left: 20px; /* S'assure d'une marge suffisante */
-        }
-        
-        /* Hero Québec */
-        .hero {
-            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+
+        /* Hero Évaluation */
+        .eval-hero {
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('1.png');
             background-size: cover;
             background-position: center;
             color: white;
-            padding: 120px 0;
+            padding: 80px 0;
             text-align: center;
         }
-        
-        .hero h1 {
+
+        .eval-hero h1 {
             font-size: 42px;
             margin-bottom: 20px;
-            line-height: 1.3;
         }
-        
-        .hero p {
+
+        .eval-hero p {
             font-size: 20px;
             max-width: 700px;
             margin: 0 auto 30px;
         }
-        
-        .btn {
-            display: inline-block;
-            background: var(--rouge-alerte);
-            color: white;
-            padding: 14px 35px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 18px;
-            transition: all 0.3s;
-            border: 2px solid var(--rouge-alerte);
-        }
-        
-        .btn:hover {
-            background: transparent;
-            color: white;
-            border-color: white;
-        }
-        
-        /* Processus en 3 étapes */
-        .process {
-            padding: 80px 0;
-            background: white;
-        }
-        
-        .section-title {
-            text-align: center;
-            margin-bottom: 60px;
-        }
-        
-        .section-title h2 {
-            font-size: 36px;
-            color: var(--bleu-qc);
-            margin-bottom: 15px;
-        }
-        
-        .steps {
+
+        /* Process Bar */
+        .process-steps {
             display: flex;
             justify-content: space-between;
+            max-width: 800px;
+            margin: 40px auto;
+            position: relative;
             flex-wrap: wrap;
+            padding: 0 10px;
         }
-        
+
+        .process-steps::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: var(--gray);
+            z-index: 1;
+        }
+
         .step {
-            flex: 0 0 30%;
             text-align: center;
-            padding: 0 15px;
+            position: relative;
+            z-index: 2;
+            flex: 1;
+            min-width: 100px;
+            padding: 0 5px;
         }
-        
+
         .step-number {
-            background: var(--bleu-qc);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--gray);
             color: white;
-            width: 60px;
-            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-weight: bold;
+        }
+
+        .step.active .step-number {
+            background-color: var(--secondary);
+        }
+
+        .step-text {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Formulaire */
+        .eval-form-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 900px;
+            margin: -50px auto 50px;
+            position: relative;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-header h2 {
+            color: var(--primary);
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .form-header p {
+            color: var(--gray);
+            font-size: 16px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--secondary);
+            color: white;
+            padding: 14px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background-color: #C0112B;
+            transform: translateY(-2px);
+        }
+
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* Section Photo Professionnelle */
+        .photo-upload-section {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 30px;
+        }
+
+        .photo-tabs {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .photo-tab {
+            padding: 12px 15px;
+            background: none;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--gray);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 3px solid transparent;
+            font-size: 15px;
+            white-space: nowrap;
+        }
+
+        .photo-tab.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--secondary);
+        }
+
+        .photo-tab i {
+            font-size: 15px;
+        }
+
+        .photo-tab-content {
+            display: none;
+        }
+
+        .photo-tab-content.active {
+            display: block;
+        }
+
+        .photo-guide {
+            background-color: var(--light-gray);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .photo-guide h4 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .photo-guide h4 i {
+            font-size: 20px;
+        }
+
+        .photo-examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .photo-example-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .photo-example-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .photo-thumbnail {
+            height: 100px;
+            background-color: #ddd;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .photo-thumbnail i {
+            font-size: 40px;
+            color: #555;
+        }
+
+        .photo-badge {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background-color: var(--secondary);
+            color: white;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            font-weight: 700;
-            margin: 0 auto 20px;
+            font-weight: bold;
+            font-size: 12px;
         }
-        
-        .step h3 {
-            color: var(--bleu-qc);
-            margin-bottom: 15px;
-            font-size: 22px;
+
+        .photo-details {
+            padding: 12px;
         }
-        
-        /* Pourquoi nous choisir */
-        .why-us {
-            background: var(--gris-clair);
-            padding: 80px 0;
-        }
-        
-        .benefits {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center; /* Centrer les éléments quand ils se brisent */
-            gap: 25px; /* Ajouter un espacement entre les éléments */
-            margin-top: 40px;
-        }
-        
-        .benefit {
-            flex: 0 0 calc(50% - 15px); /* Ajuster pour le gap */
-            max-width: 450px; /* Limiter la largeur sur les grands écrans */
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            margin-bottom: 0; /* Supprimer la marge bottom ici, utiliser gap sur le parent */
-            display: flex;
-            align-items: flex-start;
-        }
-        
-        .benefit-icon {
-            color: var(--vert-confiance);
-            font-size: 28px;
-            margin-right: 20px;
-            flex-shrink: 0;
-        }
-        
-        /* Section Politiques */
-        .policies {
-            padding: 80px 0;
-            background: white;
-        }
-        
-        .policy-tabs {
-            display: flex;
-            border-bottom: 2px solid #eee;
-            margin-bottom: 30px;
-            flex-wrap: wrap; /* Permet aux onglets de passer à la ligne */
-            justify-content: center; /* Centrer les onglets sur mobile */
-        }
-        
-        .tab-btn {
-            padding: 15px 20px; /* Réduire légèrement le padding */
-            background: none;
-            border: none;
-            border-bottom: 3px solid transparent;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            white-space: nowrap; /* Empêche le texte de se couper */
-            font-size: 15px; /* Ajuster la taille de la police */
-        }
-        
-        .tab-btn.active {
-            border-bottom: 3px solid var(--rouge-alerte);
-            color: var(--rouge-alerte);
-        }
-        
-        .tab-content {
-            display: none;
-            padding: 20px 0;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .tab-content h3 {
-            color: var(--bleu-qc);
-            margin-bottom: 15px;
-            font-size: 22px;
-        }
-        
-        .tab-content ul {
-            margin-left: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .tab-content li {
-            margin-bottom: 8px;
-        }
-        
-        /* Témoignages */
-        .testimonials {
-            background: var(--bleu-qc);
-            color: white;
-            padding: 80px 0;
-            text-align: center;
-        }
-        
-        /* CTA */
-        .cta {
-            padding: 80px 0;
-            text-align: center;
-            background: var(--rouge-alerte);
-            color: white;
-        }
-        
-        .cta h2 {
-            font-size: 36px;
-            margin-bottom: 20px;
-        }
-        
-        .cta .btn {
-            background: white;
-            color: var(--rouge-alerte);
-        }
-        
-        .cta .btn:hover {
-            background: transparent;
-            color: white;
-            border-color: white;
-        }
-        
-        /* Footer */
-        footer {
-            background: var(--gris-fonce);
-            color: white;
-            padding: 60px 0 30px;
-        }
-        
-        .footer-grid {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            margin-bottom: 40px;
-            gap: 20px; /* Ajouter un gap pour un meilleur espacement sur mobile */
-        }
-        
-        .footer-col {
-            flex: 0 0 23%;
-        }
-        
-        .footer-col h3 {
-            color: white;
-            margin-bottom: 25px;
-            font-size: 20px;
-        }
-        
-        .footer-col ul {
-            list-style: none;
-        }
-        
-        .footer-col li {
-            margin-bottom: 12px;
-        }
-        
-        .footer-col a {
-            color: #ccc;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-        
-        .footer-col a:hover {
-            color: white;
-        }
-        
-        .legal {
-            text-align: center;
-            padding-top: 30px;
-            border-top: 1px solid #444;
-            color: #aaa;
+
+        .photo-details h5 {
+            color: var(--primary);
+            margin-bottom: 5px;
             font-size: 14px;
         }
-        
-        /* Responsive */
-        @media (max-width: 992px) {
-            .step {
-                flex: 0 0 48%; /* Deux colonnes sur les tablettes */
-                margin-bottom: 40px;
-            }
-            .steps {
-                justify-content: space-around; /* Mieux répartir les étapes */
-            }
-            .benefit {
-                flex: 0 0 calc(100% - 0px); /* Une seule colonne sur tablettes/petits écrans */
-                max-width: 500px; /* Garder une taille maximale raisonnable */
-            }
-            
-            .footer-col {
-                flex: 0 0 48%;
-                margin-bottom: 30px;
-            }
+
+        .photo-details p {
+            color: var(--gray);
+            font-size: 12px;
         }
-        
+
+        .upload-box {
+            margin-top: 20px;
+        }
+
+        .upload-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: white;
+        }
+
+        .upload-label:hover {
+            border-color: var(--primary);
+            background-color: rgba(0, 86, 179, 0.05);
+        }
+
+        .upload-label i {
+            font-size: 40px;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .upload-label span {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .upload-label small {
+            color: var(--gray);
+            font-size: 12px;
+        }
+
+        .radio-label {
+            display: inline-block;
+            margin-left: 8px;
+            font-weight: normal;
+            color: var(--dark);
+        }
+        .form-group .radio-label {
+            display: block;
+            margin-bottom: 10px;
+            margin-left: 0;
+        }
+        .form-group input[type="radio"] {
+            margin-right: 10px;
+        }
+
+        /* Image Preview Container */
+        .image-preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            border: 1px dashed var(--light-gray);
+            padding: 10px;
+            min-height: 50px;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray);
+            font-size: 14px;
+        }
+        .image-preview-container:empty::before {
+            content: "Aucune image sélectionnée.";
+            display: block;
+            color: var(--gray);
+        }
+
+        .image-preview-item {
+            position: relative;
+            max-width: 120px;
+            max-height: 100px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .image-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .delete-image-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s ease-in-out;
+            z-index: 10;
+        }
+
+        .delete-image-btn:hover {
+            opacity: 1;
+            background-color: #C0112B;
+        }
+
+        #vin-decoder-results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: var(--light-gray);
+            display: none;
+        }
+
+        #vin-decoder-results p {
+            margin-bottom: 5px;
+            color: var(--dark);
+        }
+
+        #vin-decoder-results strong {
+            color: var(--primary);
+        }
+
+        /* Responsive */
         @media (max-width: 768px) {
-            .header-container {
-                flex-direction: column;
-                align-items: flex-start; /* Aligner les éléments à gauche dans la colonne */
-            }
-            
-            .logo {
-                margin-bottom: 15px;
-                width: 100%; /* Le logo prend toute la largeur disponible */
-                text-align: center; /* Centre le texte du logo */
+            .form-grid {
+                grid-template-columns: 1fr;
             }
 
-            .nav-links {
-                flex-direction: column; /* Les liens de navigation s'empilent */
-                width: 100%; /* Prend toute la largeur */
-                align-items: center; /* Centrer les liens */
-            }
-            
-            .nav-links a {
-                margin: 10px 0; /* Marge verticale pour les liens */
-                font-size: 16px; /* Ajuster la taille de la police si besoin */
-            }
-
-            .nav-links .btn-nav {
-                margin-top: 15px; /* Espacement après les liens */
-                width: 80%; /* Le bouton occupe une bonne partie de la largeur */
-                max-width: 250px; /* Limiter la largeur maximale du bouton */
-                text-align: center;
-            }
-            
-            .hero h1 {
+            .eval-hero h1 {
                 font-size: 32px;
             }
-            
-            .hero p {
+
+            .eval-hero p {
                 font-size: 18px;
             }
-            
-            .section-title h2 {
-                font-size: 28px;
+
+            .eval-form-container {
+                padding: 25px;
             }
 
+            .photo-examples-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .photo-tab {
+                padding: 8px 12px;
+                font-size: 14px;
+                gap: 5px;
+            }
+
+            .process-steps {
+                flex-direction: column;
+                align-items: center;
+                margin-bottom: 20px;
+            }
+            .process-steps::before {
+                display: none;
+            }
             .step {
-                flex: 0 0 100%; /* Une seule colonne sur les petits écrans */
+                flex: 0 0 100%;
+                margin-bottom: 20px;
+                padding: 0;
             }
-
-            .footer-col {
-                flex: 0 0 100%; /* Chaque colonne de pied de page prend toute la largeur */
-                text-align: center; /* Centrer le contenu des colonnes du pied de page */
-            }
-
-            .footer-col ul {
-                padding-left: 0; /* Supprimer le padding par défaut des listes */
-            }
-            .footer-col li {
-                display: inline-block; /* Permet d'aligner les éléments de liste en ligne */
-                margin: 0 8px 10px; /* Marge horizontale pour les éléments */
+            .step:last-child {
+                margin-bottom: 0;
             }
         }
 
-        /* Ajout d'un breakpoint pour les très petits écrans (ex: iPhone SE) */
         @media (max-width: 480px) {
-            .hero h1 {
+            .eval-hero h1 {
                 font-size: 28px;
             }
-            .hero p {
+            .eval-hero p {
                 font-size: 16px;
             }
-            .nav-links a, .nav-links .btn-nav {
-                font-size: 14px; /* Réduire la taille de la police pour très petits écrans */
-                padding: 6px 15px; /* Réduire le padding du bouton */
+            .eval-form-container {
+                padding: 15px;
             }
-            .tab-btn {
-                font-size: 13px; /* Réduire la taille de la police des onglets */
-                padding: 10px 15px;
+            .form-header h2 {
+                font-size: 24px;
+            }
+            .form-control, .btn {
+                font-size: 14px;
+                padding: 10px 12px;
+            }
+            .photo-tab {
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+            .photo-examples-grid {
+                grid-template-columns: 1fr;
+            }
+            .radio-label {
+                font-size: 14px;
+            }
+            .form-group .radio-label {
+                padding-right: 5px;
             }
         }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-    <header>
-        <div class="container header-container">
+    <header class="eval-header">
+        <div class="container">
             <div class="logo">VendreTonAuto<span>Rapide</span>.ca</div>
-            <div class="nav-links">
-                <a href="#process">Comment ça marche</a>
-                <a href="#why-us">Pourquoi nous</a>
-                <a href="#policies">Politiques</a>
-                <a href="eval.html" class="btn-nav">Évaluer mon auto</a>
-            </div>
         </div>
     </header>
 
-    <section class="hero">
+    <section class="eval-hero">
         <div class="container">
-            <h1>Vendez votre voiture au Québec en 24h, sans tracas</h1>
-            <p>Service d'évaluation et d'achat express. Obtenez une offre ferme en ligne et vendez en toute confiance.</p>
-            <a href="#contact" class="btn">Obtenir une offre maintenant</a>
-        </div>
-    </section>
+            <h1>Obtenez une offre ferme pour votre véhicule</h1>
+            <p>Remplissez ce formulaire pour recevoir une évaluation gratuite et sans engagement en moins de 30 minutes</p>
 
-    <section class="process" id="process">
-        <div class="container">
-            <div class="section-title">
-                <h2>Vendre en 3 étapes faciles</h2>
-                <p>Un processus rapide et transparent</p>
-            </div>
-            
-            <div class="steps">
-                <div class="step">
+            <div class="process-steps">
+                <div class="step active">
                     <div class="step-number">1</div>
-                    <h3>Évaluation en ligne</h3>
-                    <p>Remplissez notre formulaire ou appelez-nous pour une estimation gratuite de votre véhicule.</p>
+                    <div class="step-text">Info. du véhicule</div>
                 </div>
-                
                 <div class="step">
                     <div class="step-number">2</div>
-                    <h3>Inspection rapide</h3>
-                    <p>Nos experts vérifient votre véhicule chez vous ou dans l'un de nos centres partenaires.</p>
+                    <div class="step-text">Coordonnées</div>
                 </div>
-                
                 <div class="step">
                     <div class="step-number">3</div>
-                    <h3>Paiement immédiat</h3>
-                    <p>Recevez votre paiement par virement bancaire ou chèque certifié sur place.</p>
+                    <div class="step-text">Confirmation</div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="why-us" id="why-us">
-        <div class="container">
-            <div class="section-title">
-                <h2>Pourquoi choisir VendreTonAutoRapide.ca?</h2>
-                <p>La solution la plus simple pour vendre votre véhicule au Québec</p>
+    <div class="container">
+        <div class="eval-form-container">
+            <div class="form-header">
+                <h2>Informations sur votre véhicule</h2>
+                <p>Tous les champs sont obligatoires pour une évaluation précise</p>
             </div>
-            
-            <div class="benefits">
-                <div class="benefit">
-                    <div class="benefit-icon">
-                        <i class="fas fa-bolt"></i>
+
+            <form id="evaluationForm">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="vin">Numéro d'identification du véhicule (VIN) <i class="fas fa-question-circle" title="Le VIN se trouve généralement sur le tableau de bord (côté conducteur) ou sur l'étiquette de la porte."></i></label>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <input type="text" id="vin" class="form-control" placeholder="Entrez le VIN de 17 caractères" maxlength="17" pattern="[A-HJ-NPR-Z0-9]{17}" title="Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)" required style="flex: 1;">
+                            <button type="button" id="scanVinBtn" class="btn" title="Scanner avec la caméra"
+                                    onclick="window.location.href='scanner.html?returnUrl=' + encodeURIComponent(window.location.href);">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                        </div>
+                        <button type="button" id="decodeVinBtn" class="btn" style="margin-top: 10px;">Décoder le VIN</button>
                     </div>
-                    <div>
-                        <h3>Rapidité</h3>
-                        <p>Transaction complète en aussi peu que 24 heures. Pas d'attente pour trouver un acheteur.</p>
+
+                    <div id="vin-decoder-results" class="full-width">
+                        <h4>Résultats du décodage VIN :</h4>
+                        <p>Marque: <strong id="decodedMarque">N/A</strong></p>
+                        <p>Modèle: <strong id="decodedModele">N/A</strong></p>
+                        <p>Année: <strong id="decodedAnnee">N/A</strong></p>
+                        <p>Carburant: <strong id="decodedCarburant">N/A</strong></p>
+                        <p>Transmission: <strong id="decodedTransmission">N/A</strong></p>
+                        <p style="color: var(--gray); font-size: 13px; margin-top: 10px;">Veuillez vérifier et compléter les champs du formulaire avec les informations décodées.</p>
                     </div>
+
+                                        <div class="form-group">
+                        <label for="marque">Marque</label>
+                        <select id="marque" class="form-control" required>
+                            <option value="">Sélectionnez une marque</option>
+                            <option>Acura</option>
+                            <option>Audi</option>
+                            <option>BMW</option>
+                            <option>Chevrolet</option>
+                            <option>Ford</option>
+                            <option>Honda</option>
+                            <option>Hyundai</option>
+                            <option>Jeep</option>
+                            <option>Kia</option>
+                            <option>Lexus</option>
+                            <option>Mazda</option>
+                            <option>Mercedes-Benz</option>
+                            <option>Nissan</option>
+                            <option>Subaru</option>
+                            <option>Toyota</option>
+                            <option>Volkswagen</option>
+                            <option>Autre</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="modele">Modèle</label>
+                        <input type="text" id="modele" class="form-control" placeholder="Ex: Civic, F-150, Rogue" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="annee">Année</label>
+                        <select id="annee" class="form-control" required>
+                            <option value="">Sélectionnez l'année</option>
+                            <script>
+                                const currentYear = new Date().getFullYear();
+                                for (let year = currentYear; year >= 1990; year--) {
+                                    document.write(`<option value="${year}">${year}</option>`);
+                                }
+                            </script>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="kilometrage">Kilométrage</label>
+                        <input type="number" id="kilometrage" class="form-control" placeholder="Ex: 75000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="transmission">Transmission</label>
+                        <select id="transmission" class="form-control" required>
+                            <option value="">Sélectionnez</option>
+                            <option>Automatique</option>
+                            <option>Manuelle</option>
+                            <option>Autre</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="carburant">Type de carburant</label>
+                        <select id="carburant" class="form-control" required>
+                            <option value="">Sélectionnez</option>
+                            <option>Essence</option>
+                            <option>Diesel</option>
+                            <option>Hybride</option>
+                            <option>Électrique</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>État général du véhicule <span style="color: var(--secondary); font-weight: normal;">(Choisissez l'option qui décrit le mieux l'état actuel)</span></label>
+                        <div style="padding-left: 15px;">
+                            <div class="form-group">
+                                <input type="radio" id="etatExcellent" name="etat" value="Excellent" required>
+                                <label for="etatExcellent" class="radio-label"><b>Excellent</b> - Véhicule en condition impeccable, sans aucun défaut esthétique ou mécanique notable. L'entretien a toujours été rigoureux et à jour.</label>
+                            </div>
+                            <div class="form-group">
+                                <input type="radio" id="etatTresBon" name="etat" value="Très bon">
+                                <label for="etatTresBon" class="radio-label"><b>Très bon</b> - Véhicule en très bonne condition générale. Quelques imperfections esthétiques mineures (ex: petites égratignures) peuvent être présentes, mais aucun problème mécanique significatif.</label>
+                            </div>
+                            <div class="form-group">
+                                <input type="radio" id="etatBon" name="etat" value="Bon">
+                                <label for="etatBon" class="radio-label"><b>Bon</b> - Véhicule en condition correcte avec une usure normale pour son âge et son kilométrage. Quelques réparations mineures pourraient être à prévoir à court ou moyen terme. L'esthétique présente des signes d'utilisation.</label>
+                            </div>
+                            <div class="form-group">
+                                <input type="radio" id="etatAcceptable" name="etat" value="Acceptable">
+                                <label for="etatAcceptable" class="radio-label"><b>Acceptable</b> - Véhicule avec une usure plus prononcée et potentiellement des réparations nécessaires. Des problèmes esthétiques et/ou mécaniques sont présents, mais le véhicule est toujours fonctionnel (sauf indication contraire).</label>
+                            </div>
+                            <div class="form-group">
+                                <input type="radio" id="etatNonFonctionnel" name="etat" value="Non fonctionnel">
+                                <label for="etatNonFonctionnel" class="radio-label"><b>Non fonctionnel</b> - Véhicule qui ne démarre pas ou qui présente des problèmes mécaniques majeurs le rendant inutilisable en l'état actuel.</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="full-width photo-upload-section">
+                        <h3>Photos de votre véhicule</h3>
+                        <p>Veuillez téléverser des photos claires pour une évaluation plus précise.</p>
+
+                        <div class="photo-tabs">
+                            <button class="photo-tab active" data-tab="exterieur"><i class="fas fa-car"></i> Extérieur</button>
+                            <button class="photo-tab" data-tab="interieur"><i class="fas fa-couch"></i> Intérieur</button>
+                            <button class="photo-tab" data-tab="dommages"><i class="fas fa-exclamation-triangle"></i> Dommages (s'il y en a)</button>
+                        </div>
+
+                        <div id="exterieur" class="photo-tab-content active">
+                            <div class="photo-guide">
+                                <h4><i class="fas fa-camera"></i> Guide pour les photos de l'extérieur</h4>
+                                <p>Veuillez prendre des photos claires de tous les angles de votre véhicule.</p>
+                                <div class="photo-examples-grid">
+                                    <div class="photo-example-card">
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Avant%203/4');"></div>
+                                        <div class="photo-details">
+                                            <h5>Avant 3/4</h5>
+                                            <p>Montrant l'avant et le côté.</p>
+                                        </div>
+                                    </div>
+                                    <div class="photo-example-card">
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Arrière%203/4');"></div>
+                                        <div class="photo-details">
+                                            <h5>Arrière 3/4</h5>
+                                            <p>Montrant l'arrière et le côté.</p>
+                                        </div>
+                                    </div>
+                                    <div class="photo-example-card">
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Côté%20(Droit)');"></div>
+                                        <div class="photo-details">
+                                            <h5>Côté (Droit)</h5>
+                                            <p>Vue latérale complète.</p>
+                                        </div>
+                                    </div>
+                                    <div class="photo-example-card">
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Côté%20(Gauche)');"></div>
+                                        <div class="photo-details">
+                                            <h5>Côté (Gauche)</h5>
+                                            <p>Autre vue latérale complète.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="upload-box">
+                                <label for="photoExterieur" class="upload-label">
+                                    <i class="fas fa-upload"></i>
+                                    <span>Cliquez ou glissez-déposez les photos de l'extérieur ici</span>
+                                    <small>Formats acceptés: JPG, PNG</small>
+                                </label>
+                                <input type="file" id="photoExterieur" class="photo-input" data-category="Exterieur" data-max-files="10" multiple style="display: none;">
+                                <div id="exterieur-preview" class="image-preview-container"></div>
+                            </div>
+                        </div>
+
+                        <div id="interieur" class="photo-tab-content">
+                            <div class="photo-guide">
+                                <h4><i class="fas fa-camera"></i> Guide pour les photos de l'intérieur</h4>
+                                <p>Veuillez prendre des photos claires du tableau de bord, des sièges avant et arrière.</p>
+                                <div class="photo-examples-grid">
+                                    <div class="photo-example-card">
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Tableau%20de%20bord');"></div>
+                                        <div class="photo-details">
+                                            <h5>Tableau de bord</h5>
+                                            <p>Vue complète du tableau de bord.</p>
+                                        </div>
+                                    </div>
+                                    <div class="photo-example-card">
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Sièges%20Avant');"></div>
+                                        <div class="photo-details">
+                                            <h5>Sièges Avant</h5>
+                                            <p>Les deux sièges avant en entier.</p>
+                                        </div>
+                                    </div>
+                                    <div class="photo-example-card">
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Sièges%20Arrière');"></div>
+                                        <div class="photo-details">
+                                            <h5>Sièges Arrière</h5>
+                                            <p>La banquette arrière en entier.</p>
+                                        </div>
+                                    </div>
+                                    <div class="photo-example-card">
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Odomètre');"></div>
+                                        <div class="photo-details">
+                                            <h5>Odomètre</h5>
+                                            <p>Lecture claire du kilométrage.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="upload-box">
+                                <label for="photoInterieur" class="upload-label">
+                                    <i class="fas fa-upload"></i>
+                                    <span>Cliquez ou glissez-déposez les photos de l'intérieur ici</span>
+                                    <small>Formats acceptés: JPG, PNG</small>
+                                </label>
+                                <input type="file" id="photoInterieur" class="photo-input" data-category="Interieur" data-max-files="10" multiple style="display: none;">
+                                <div id="interieur-preview" class="image-preview-container"></div>
+                            </div>
+                        </div>
+
+                        <div id="dommages" class="photo-tab-content">
+                            <div class="photo-guide">
+                                <h4><i class="fas fa-camera"></i> Photos des dommages (s'il y en a)</h4>
+                                <p>Veuillez prendre des photos claires de tous les dommages ou imperfections notables.</p>
+                            </div>
+                            <div class="upload-box">
+                                <label for="photoDommages" class="upload-label">
+                                    <i class="fas fa-upload"></i>
+                                    <span>Cliquez ou glissez-déposez les photos des dommages ici</span>
+                                    <small>Formats acceptés: JPG, PNG</small>
+                                </label>
+                                <input type="file" id="photoDommages" class="photo-input" data-category="Dommages" data-max-files="20" multiple style="display: none;">
+                                <div id="dommages-preview" class="image-preview-container"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="full-width">
+                        <h3>Vos coordonnées</h3>
+                        <p>Veuillez fournir vos informations pour que nous puissions vous contacter.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nom">Nom complet</label>
+                        <input type="text" id="nom" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="telephone">Numéro de téléphone</label>
+                        <input type="tel" id="telephone" class="form-control" placeholder="Ex: 514-123-4567" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="courriel">Adresse courriel</label>
+                        <input type="email" id="courriel" class="form-control" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="commentaires">Commentaires additionnels (facultatif)</label>
+                        <textarea id="commentaires" class="form-control" rows="4" placeholder="Informations supplémentaires sur votre véhicule"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-block">Générer l'évaluation PDF</button>
                 </div>
-                
-                <div class="benefit">
-                    <div class="benefit-icon">
-                        <i class="fas fa-hand-holding-usd"></i>
-                    </div>
-                    <div>
-                        <h3>Meilleur prix garanti</h3>
-                        <p>Nous comparons les offres du marché pour vous proposer le meilleur prix possible.</p>
-                    </div>
-                </div>
-                
-                <div class="benefit">
-                    <div class="benefit-icon">
-                        <i class="fas fa-file-signature"></i>
-                    </div>
-                    <div>
-                        <h3>Processus sécurisé</h3>
-                        <p>Toutes les transactions sont documentées et conformes aux lois québécoises.</p>
-                    </div>
-                </div>
-                
-                <div class="benefit">
-                    <div class="benefit-icon">
-                        <i class="fas fa-car-side"></i>
-                    </div>
-                    <div>
-                        <h3>Prise en charge complète</h3>
-                        <p>Nous gérons toute la paperasse avec la SAAQ pour un transfert sans soucis.</p>
-                    </div>
-                </div>
-            </div>
+            </form>
         </div>
-    </section>
+    </div>
 
-    <section class="policies" id="policies">
+    <footer style="text-align: center; padding: 30px 0; color: var(--gray); font-size: 14px;">
         <div class="container">
-            <div class="section-title">
-                <h2>Nos Politiques</h2>
-                <p>Transparence et professionnalisme</p>
-            </div>
-            
-            <div class="policy-tabs">
-                <button class="tab-btn active" onclick="openTab(event, 'confidentialite')">Confidentialité</button>
-                <button class="tab-btn" onclick="openTab(event, 'conditions')">Conditions</button>
-                <button class="tab-btn" onclick="openTab(event, 'paiement')">Paiement</button>
-                <button class="tab-btn" onclick="openTab(event, 'garanties')">Garanties</button>
-            </div>
-            
-            <div id="confidentialite" class="tab-content active">
-                <h3>Protection de vos informations</h3>
-                <p>Nous collectons uniquement les données nécessaires pour :</p>
-                <ul>
-                    <li>Évaluer votre véhicule</li>
-                    <li>Effectuer la transaction</li>
-                    <li>Remplir les obligations légales (SAAQ)</li>
-                </ul>
-                <p>Vos informations ne seront jamais vendues ou partagées sans votre consentement explicite, conformément à la Loi 25 sur la protection des données.</p>
-            </div>
-            
-            <div id="conditions" class="tab-content">
-                <h3>Conditions générales</h3>
-                <ul>
-                    <li>Le vendeur doit être le propriétaire légal du véhicule</li>
-                    <li>Le véhicule doit être libre de tout gage (possibilité de payer le lien)</li>
-                    <li>Toutes les informations fournies doivent être exactes</li>
-                    <li>L'offre finale est basée sur l'inspection physique</li>
-                </ul>
-            </div>
-            
-            <div id="paiement" class="tab-content">
-                <h3>Modalités de paiement</h3>
-                <ul>
-                    <li>Virement bancaire sécurisé (dans les 24h)</li>
-                    <li>Chèque certifié (sur place)</li>
-                    <li>Argent comptant (limité à 9,999$ CAD)</li>
-                </ul>
-                <p>Des frais administratifs de 199$ CAD peuvent s'appliquer pour couvrir les frais de dossier et le transfert SAAQ.</p>
-            </div>
-            
-            <div id="garanties" class="tab-content">
-                <h3>Garanties et responsabilités</h3>
-                <ul>
-                    <li>Vente "en l'état" - inspection recommandée avant achat</li>
-                    <li>Nous ne sommes pas responsables des vices cachés</li>
-                    <li>Option : Garantie mécanique 30 jours disponible</li>
-                </ul>
-            </div>
-        </div>
-    </section>
-
-    <section class="testimonials">
-        <div class="container">
-            <div class="section-title">
-                <h2>Ce que nos clients disent</h2>
-                <p>Des centaines de véhicules vendus à travers le Québec</p>
-            </div>
-            
-            </div>
-    </section>
-
-    <section class="cta" id="contact">
-        <div class="container">
-            <h2>Prêt à vendre votre véhicule?</h2>
-            <p>Obtenez une évaluation gratuite en moins de 2 minutes</p>
-            <a href="eval.html" class="btn">Démarrer l'évaluation</a>
-        </div>
-    </section>
-
-    <footer>
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-col">
-                    <h3>VendreTonAutoRapide.ca</h3>
-                    <p>Le service le plus rapide pour vendre votre véhicule au Québec, sans commission cachée.</p>
-                </div>
-                
-                <div class="footer-col">
-                    <h3>Liens rapides</h3>
-                    <ul>
-                        <li><a href="#process">Comment ça marche</a></li>
-                        <li><a href="#why-us">Avantages</a></li>
-                        <li><a href="#policies">Politiques</a></li>
-                        <li><a href="#contact">Contact</a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-col">
-                    <h3>Nous joindre</h3>
-                    <ul>
-                        <li><i class="fas fa-phone"></i> (438) 357-1910</li>
-                        <li><i class="fas fa-envelope"></i> Évaluation@vendretonautorapide.ca</li>
-                        <li><i class="fas fa-map-marker-alt"></i> Montréal, Québec</li>
-                    </ul>
-                </div>
-                
-                <div class="footer-col">
-                    <h3>Légal</h3>
-                    <ul>
-                        <li><a href="#policies">Mentions légales</a></li>
-                        <li><a href="#policies">Confidentialité</a></li>
-                        <li>NEQ: 1234567890</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="legal">
-                <p>&copy; 2023 VendreTonAutoRapide.ca - Tous droits réservés.</p>
-            </div>
+            <p>&copy; 2025 VendreTonAutoRapide.ca. Tous droits réservés.</p>
+            <p>Montréal, Québec</p>
         </div>
     </footer>
 
     <script>
-        // Tab functionality
-        function openTab(evt, tabName) {
-            var i, tabcontent, tabbuttons;
+        // Gérer le retour du scan
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const scannedVin = urlParams.get('scannedVin');
             
-            tabcontent = document.getElementsByClassName("tab-content");
-            for (i = 0; i < tabcontent.length; i++) {
-                tabcontent[i].classList.remove("active");
-            }
-            
-            tabbuttons = document.getElementsByClassName("tab-btn");
-            for (i = 0; i < tabbuttons.length; i++) {
-                tabbuttons[i].classList.remove("active");
-            }
-            
-            document.getElementById(tabName).classList.add("active");
-            evt.currentTarget.classList.add("active");
-        }
-        
-        // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
+            if (scannedVin) {
+                document.getElementById('vin').value = scannedVin;
+                document.getElementById('decodeVinBtn').click();
                 
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
+                // Nettoyer l'URL
+                const cleanUrl = window.location.href.split('?')[0];
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+        });
+
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const returnUrl = urlParams.get('returnUrl') || 'index.html';
+            
+            const codeReader = new ZXing.BrowserMultiFormatReader();
+            const videoElement = document.getElementById('scanner-video');
+            
+            // Démarrer le scan
+            codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
+                if (result) {
+                    const scannedVin = result.text.toUpperCase();
+                    if (/^[A-HJ-NPR-Z0-9]{17}$/.test(scannedVin)) {
+                        // Fermer le scanner
+                        codeReader.reset();
+                        
+                        // Rediriger vers la page d'origine avec le VIN scanné
+                        window.location.href = returnUrl + (returnUrl.includes('?') ? '&' : '?' + 'scannedVin=' + encodeURIComponent(scannedVin);
+                    } else {
+                        alert('Code scanné invalide. Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)');
+                    }
+                }
+                
+                if (err && !(err instanceof ZXing.NotFoundException)) {
+                    console.error(err);
+                    alert(`Erreur de scan: ${err}`);
+                }
+            });
+            
+            // Bouton Annuler
+            document.getElementById('cancel-scan').addEventListener('click', () => {
+                codeReader.reset();
+                window.location.href = returnUrl;
+            });
+            
+            // Nettoyer à la fermeture
+            window.addEventListener('beforeunload', () => {
+                codeReader.reset();
             });
         });
     </script>
