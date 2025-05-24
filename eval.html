@@ -904,6 +904,19 @@
     </footer>
 
     <script>
+// Récupération du VIN scanné depuis localStorage
+document.addEventListener('DOMContentLoaded', function() {
+    const vinScanned = localStorage.getItem('scannedVin');
+    if (vinScanned) {
+        document.getElementById('vin').value = vinScanned;
+        localStorage.removeItem('scannedVin'); // Nettoyer après utilisation
+        
+        // Optionnel : déclencher le décodage automatique
+        setTimeout(() => {
+            document.getElementById('decodeVinBtn').click();
+        }, 500);
+    }
+});
         // Photo Tab Logic
         const photoTabs = document.querySelectorAll('.photo-tab');
         const photoTabContents = document.querySelectorAll('.photo-tab-content');
