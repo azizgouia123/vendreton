@@ -3,227 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner VIN - VendreTonAutoRapide.ca</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Scanner VIN | VendreTonAutoRapide.ca</title>
     <style>
-        body {
-            font-family: 'Montserrat', Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background-color: #f8f9fa; /* Couleur de fond légère */
-            color: #343a40; /* Couleur de texte sombre */
-            padding: 20px;
-            box-sizing: border-box;
+        :root {
+            --primary: #0056B3; /* Bleu Québec */
+            --secondary: #E31937; /* Rouge Alerte */
+            --accent: #FFC72C; /* Or */
+            --dark: #1A1A1A;
+            --light: #F8F9FA;
+            --gray: #6C757D;
+            --light-gray: #E9ECEF;
+        }
+
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', Arial, sans-serif;
         }
-        #scanner-header {
-            margin-bottom: 20px;
-            text-align: center;
+
+        body {
+            background-color: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
         }
-        #scanner-header h1 {
-            color: #0056B3; /* Bleu primaire */
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 0;
+        }
+
+        /* Header */
+        .scanner-header {
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px 0;
+        }
+
+        .logo {
             font-size: 28px;
-            margin-bottom: 10px;
-        }
-        #scanner-header p {
-            color: #6c757d; /* Gris */
-            font-size: 15px;
-            margin-bottom: 20px;
-        }
-        #qr-reader {
-            width: 100%;
-            max-width: 400px; /* Taille maximale du scanner */
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            overflow: hidden; /* Assurez-vous que la vidéo reste dans les bordures */
-        }
-        .scanner-instructions {
-            font-size: 15px;
-            margin-top: 20px;
-            margin-bottom: 20px;
-            color: #555;
+            font-weight: 800;
+            color: var(--primary);
             text-align: center;
         }
-        .scanner-instructions i {
-            margin-right: 5px;
-            color: #0056B3; /* Icône bleue */
+
+        .logo span {
+            color: var(--secondary);
         }
-        #closeScannerBtn {
-            background-color: #6c757d; /* Gris foncé */
+
+        /* Scanner Container */
+        .scanner-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 900px;
+            margin: 50px auto;
+            text-align: center;
+        }
+
+        .scanner-title {
+            color: var(--primary);
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+
+        .scanner-instructions {
+            color: var(--gray);
+            font-size: 16px;
+            margin-bottom: 30px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .scanner-video {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 0 auto;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .scanner-controls {
+            margin-top: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--secondary);
             color: white;
-            padding: 12px 25px;
+            padding: 14px 30px;
             border: none;
             border-radius: 5px;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            margin-top: 20px;
         }
-        #closeScannerBtn:hover {
-            background-color: #5a6268; /* Gris plus foncé au survol */
+
+        .btn:hover {
+            background-color: #C0112B;
+            transform: translateY(-2px);
         }
-        #error-message {
-            color: #dc3545; /* Rouge d'erreur */
-            margin-top: 15px;
+
+        .btn i {
+            margin-right: 8px;
+        }
+
+        /* Footer */
+        .scanner-footer {
             text-align: center;
-            font-weight: 600;
-            display: none; /* Caché par défaut */
+            padding: 30px 0;
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .scanner-container {
+                padding: 25px;
+            }
+
+            .scanner-title {
+                font-size: 24px;
+            }
+
+            .scanner-instructions {
+                font-size: 15px;
+            }
+
+            .btn {
+                font-size: 16px;
+                padding: 12px 25px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .scanner-container {
+                padding: 20px 15px;
+            }
+
+            .scanner-title {
+                font-size: 22px;
+            }
+
+            .scanner-instructions {
+                font-size: 14px;
+            }
+
+            .btn {
+                font-size: 14px;
+                padding: 10px 20px;
+            }
         }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://unpkg.com/@zxing/library@0.19.1"></script>
 </head>
 <body>
-    <div id="scanner-header">
-        <h1>Scannez le code-barres VIN</h1>
-        <p class="scanner-instructions">
-            <i class="fas fa-info-circle"></i> Placez le code-barres VIN de votre véhicule entièrement à l'intérieur de la boîte de scan verte. Assurez-vous d'avoir une bonne lumière et tenez votre téléphone stable.
-        </p>
-        <div id="qr-reader"></div>
-        <div id="error-message"></div>
-        <button type="button" id="closeScannerBtn">Fermer le scanner</button>
+    <header class="scanner-header">
+        <div class="container">
+            <div class="logo">VendreTonAuto<span>Rapide</span>.ca</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="scanner-container">
+            <h2 class="scanner-title"><i class="fas fa-camera"></i> Scanner le VIN</h2>
+            <p class="scanner-instructions">Positionnez le code VIN dans le cadre ci-dessous. Le code se trouve généralement sur le tableau de bord (côté conducteur) ou sur l'étiquette de la porte.</p>
+            
+            <video class="scanner-video" id="scanner-video" playsinline></video>
+            
+            <div class="scanner-controls">
+                <button class="btn" id="cancel-scan">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+            </div>
+        </div>
     </div>
 
+    <footer class="scanner-footer">
+        <div class="container">
+            <p>&copy; 2025 VendreTonAutoRapide.ca. Tous droits réservés.</p>
+            <p>Montréal, Québec</p>
+        </div>
+    </footer>
+
     <script>
-        let html5QrCode = null; // Variable pour l'instance du scanner
-        const errorMessageDiv = document.getElementById('error-message');
-
-        // Démarre le scanner dès que la page est chargée
         document.addEventListener('DOMContentLoaded', () => {
-            startScanningProcess();
-        });
-
-        // Gère le bouton "Fermer le scanner"
-        document.getElementById('closeScannerBtn').addEventListener('click', () => {
-            stopScanner().finally(() => {
-                window.close(); // Ferme la fenêtre du scanner
-            });
-        });
-
-        // Fonction pour afficher les messages d'erreur
-        function showErrorMessage(message) {
-            errorMessageDiv.textContent = message;
-            errorMessageDiv.style.display = 'block';
-        }
-
-        // Fonction pour cacher les messages d'erreur
-        function hideErrorMessage() {
-            errorMessageDiv.style.display = 'none';
-            errorMessageDiv.textContent = '';
-        }
-
-        // Fonction principale pour démarrer le processus de scan
-        function startScanningProcess() {
-            // Vérifie si Html5Qrcode est bien chargé
-            if (typeof Html5Qrcode === 'undefined') {
-                showErrorMessage('Le scanner n\'est pas prêt. Veuillez recharger la page.');
-                console.error('Html5Qrcode n\'est pas défini. Le script n\'a peut-être pas été chargé.');
-                return;
-            }
-
-            hideErrorMessage(); // Cache tout message d'erreur précédent
-
-            // Initialise le scanner si ce n'est pas déjà fait
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("qr-reader");
-            }
-
-            // Configuration du scanner
-            const scannerConfig = {
-                fps: 10, // Images par seconde
-                qrbox: { width: 280, height: 120 }, // Boîte de scan optimisée pour les VIN (plus large que haute)
-                formatsToDecode: [Html5QrcodeSupportedFormats.CODE_39] // Cherche explicitement le format Code 39 (utilisé pour les VIN)
-            };
-
-            // Callback en cas de succès du scan
-            const onScanSuccess = (decodedText, decodedResult) => {
-                console.log(`VIN Scanné: ${decodedText}`);
-                if (window.opener) {
-                    // Envoie le VIN scanné à la fenêtre d'origine (eval.html)
-                    // Utilisez window.location.origin pour une sécurité maximale,
-                    // cela garantit que le message n'est envoyé qu'au même domaine.
-                    window.opener.postMessage({ vin: decodedText }, window.location.origin);
-                } else {
-                    console.warn("Aucune fenêtre d'origine trouvée. Impossible de renvoyer le VIN.");
-                    alert("VIN scanné: " + decodedText + "\nVeuillez le copier et le coller dans le formulaire principal.");
-                }
-                // Arrête le scanner et ferme la fenêtre après un scan réussi
-                stopScanner().finally(() => {
-                    window.close();
-                });
-            };
-
-            // Callback en cas d'erreur du scan (souvent appelé quand aucun code n'est trouvé)
-            const onScanError = (errorMessage) => {
-                // Cette fonction est appelée très fréquemment (par ex. "aucun code trouvé"),
-                // évitez donc les mises à jour UI ou les logs trop agressifs ici.
-                // Ne montrez un message d'erreur général que si le scanner ne parvient pas à démarrer du tout.
-            };
-
-            // Tente de démarrer le scanner avec la caméra arrière par défaut
-            html5QrCode.start(
-                { facingMode: { exact: "environment" } }, // Préfère la caméra arrière
-                scannerConfig,
-                onScanSuccess,
-                onScanError
-            ).catch(initialErr => {
-                console.warn("Échec du démarrage avec la caméra arrière (environment), tentative avec les ID de périphérique spécifiques. Erreur:", initialErr);
-                // Fallback: Tente de trouver d'autres caméras
-                Html5Qrcode.getCameras().then(devices => {
-                    if (devices && devices.length) {
-                        let selectedCameraId = null;
-                        // Tente de trouver une caméra explicitement étiquetée comme 'back'
-                        const rearCamera = devices.find(device => device.label.toLowerCase().includes('back'));
-                        if (rearCamera) {
-                            selectedCameraId = rearCamera.id;
-                        } else {
-                            // Sinon, utilise la première caméra disponible
-                            selectedCameraId = devices[0].id;
-                            console.warn("Aucune caméra 'arrière' trouvée par son étiquette, utilisation de la première caméra disponible.");
-                        }
-
-                        // Tente de démarrer le scanner avec l'ID de périphérique sélectionné
-                        html5QrCode.start(
-                            selectedCameraId,
-                            scannerConfig,
-                            onScanSuccess,
-                            onScanError
-                        ).catch(fallbackErr => {
-                            console.error(`Impossible de démarrer le scan après la tentative de secours: ${fallbackErr}`);
-                            showErrorMessage('Impossible de démarrer le scanner. Assurez-vous d\'avoir une caméra et d\'accorder la permission.');
-                            stopScanner();
-                        });
+            const urlParams = new URLSearchParams(window.location.search);
+            const returnUrl = urlParams.get('returnUrl') || 'eval.html';
+            
+            const codeReader = new ZXing.BrowserMultiFormatReader();
+            const videoElement = document.getElementById('scanner-video');
+            
+            // Démarrer le scan
+            codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
+                if (result) {
+                    const scannedVin = result.text.toUpperCase();
+                    if (/^[A-HJ-NPR-Z0-9]{17}$/.test(scannedVin)) {
+                        // Fermer le scanner
+                        codeReader.reset();
+                        
+                        // Rediriger vers la page d'origine avec le VIN scanné
+                        window.location.href = returnUrl + (returnUrl.includes('?') ? '&' : '?') + 'scannedVin=' + encodeURIComponent(scannedVin);
                     } else {
-                        showErrorMessage("Aucune caméra trouvée pour le scan de VIN.");
-                        stopScanner();
+                        alert('Code scanné invalide. Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)');
                     }
-                }).catch(getCamerasErr => {
-                    console.error(`Erreur lors de l'obtention des périphériques de caméra: ${getCamerasErr}`);
-                    showErrorMessage("Erreur d'accès aux caméras. Vérifiez les permissions.");
-                    stopScanner();
-                });
-            });
-        }
-
-        // Fonction pour arrêter le scanner
-        function stopScanner() {
-            return new Promise((resolve, reject) => {
-                if (html5QrCode && html5QrCode.isScanning) {
-                    html5QrCode.stop().then(() => {
-                        console.log("Le scanner de code VIN a été arrêté.");
-                        resolve();
-                    }).catch((err) => {
-                        console.error("Erreur lors de l'arrêt du scanner:", err);
-                        reject(err);
-                    });
-                } else {
-                    resolve(); // Résout si le scanner n'est pas en cours d'exécution
+                }
+                
+                if (err && !(err instanceof ZXing.NotFoundException)) {
+                    console.error(err);
+                    alert(`Erreur de scan: ${err}`);
                 }
             });
-        }
+            
+            // Bouton Annuler
+            document.getElementById('cancel-scan').addEventListener('click', () => {
+                codeReader.reset();
+                window.location.href = returnUrl;
+            });
+            
+            // Nettoyer à la fermeture
+            window.addEventListener('beforeunload', () => {
+                codeReader.reset();
+            });
+        });
     </script>
 </body>
 </html>
