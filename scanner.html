@@ -1,65 +1,165 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scanner VIN</title>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <style>
-    #reader {
-      width: 100%;
-      max-width: 600px;
-      height: 400px;
-      margin: 0 auto;
-      border: 3px solid #E31937;
-    }
-    #vin-result {
-      font-size: 24px;
-      text-align: center;
-      margin: 20px;
-      font-weight: bold;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner VIN Haute Précision</title>
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        #scanner-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+        }
+        #video {
+            width: 100%;
+            border: 3px solid #E31937;
+            border-radius: 8px;
+        }
+        #scan-region {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 30%;
+            border: 3px dashed yellow;
+            pointer-events: none;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            min-height: 30px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background-color: #E31937;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <div id="reader"></div>
-  <div id="vin-result">Aucun VIN détecté</div>
+    <h1>Scanner de VIN</h1>
+    <div id="scanner-container">
+        <video id="video"></video>
+        <div id="scan-region"></div>
+    </div>
+    <div id="result">En attente du scan...</div>
+    <button id="toggle-btn">Changer de Caméra</button>
 
-  <script>
-    const html5QrCode = new Html5Qrcode("reader");
-    const vinResult = document.getElementById("vin-result");
+    <script>
+        const videoElement = document.getElementById('video');
+        const resultElement = document.getElementById('result');
+        const toggleBtn = document.getElementById('toggle-btn');
+        
+        let currentDeviceId = null;
+        let codeReader = new ZXing.BrowserMultiFormatReader();
+        let isScanning = false;
+        let currentStream = null;
 
-    // Démarrer le scanner avec une configuration optimisée pour les VIN
-    html5QrCode.start(
-      { facingMode: "environment" }, // Caméra arrière
-      {
-        fps: 10,
-        qrbox: { width: 300, height: 150 }, // Grande zone de scan
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.CODE_128, // Format standard des VIN
-          Html5QrcodeSupportedFormats.CODE_39
-        ],
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true,
-          useBarcodeDetectorIfSupported: true // Double compatibilité
+        // Démarrer le scanner
+        async function startScanner(deviceId = null) {
+            try {
+                stopScanner();
+                
+                const constraints = {
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" })
+                    }
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                currentStream = stream;
+                videoElement.srcObject = stream;
+                
+                codeReader.decodeFromVideoElement(videoElement, (result, err) => {
+                    if (result) {
+                        const vin = result.text.toUpperCase();
+                        if (/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
+                            resultElement.textContent = `VIN DÉTECTÉ: ${vin}`;
+                            resultElement.style.color = "#1a7f37";
+                            
+                            // Option: Arrêter après détection réussie
+                            // stopScanner();
+                        }
+                    }
+                    if (err && !(err instanceof ZXing.NotFoundException)) {
+                        console.error(err);
+                    }
+                });
+
+                isScanning = true;
+                resultElement.textContent = "Scan en cours...";
+                resultElement.style.color = "#333";
+                
+            } catch (error) {
+                console.error("Erreur:", error);
+                resultElement.textContent = "Erreur: " + error.message;
+                resultElement.style.color = "#E31937";
+            }
         }
-      },
-      (decodedText) => {
-        // Vérification du format VIN (17 caractères alphanumériques)
-        if (/^[A-HJ-NPR-Z0-9]{17}$/i.test(decodedText)) {
-          vinResult.textContent = `VIN valide : ${decodedText.toUpperCase()}`;
-          // html5QrCode.stop(); // Optionnel : arrêter après succès
-        } else {
-          vinResult.textContent = "⚠️ Code incorrect (17 caractères requis)";
+
+        // Arrêter le scanner
+        function stopScanner() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+            codeReader.reset();
+            isScanning = false;
         }
-      },
-      (errorMessage) => {
-        // Ignorer les erreurs normales de non-détection
-      }
-    ).catch((err) => {
-      console.error("Erreur du scanner :", err);
-      vinResult.textContent = "Erreur : " + err.message;
-    });
-  </script>
+
+        // Changer de caméra
+        async function toggleCamera() {
+            try {
+                const devices = await ZXing.BrowserCodeReader.listVideoInputDevices();
+                if (devices.length < 2) {
+                    alert("Une seule caméra disponible");
+                    return;
+                }
+                
+                const currentIndex = currentDeviceId 
+                    ? devices.findIndex(d => d.deviceId === currentDeviceId)
+                    : -1;
+                
+                const nextIndex = (currentIndex + 1) % devices.length;
+                currentDeviceId = devices[nextIndex].deviceId;
+                
+                startScanner(currentDeviceId);
+                
+            } catch (error) {
+                console.error("Erreur changement caméra:", error);
+            }
+        }
+
+        // Événements
+        toggleBtn.addEventListener('click', toggleCamera);
+        
+        // Démarrer au chargement
+        window.addEventListener('load', () => {
+            startScanner();
+        });
+
+        // Nettoyer à la fermeture
+        window.addEventListener('beforeunload', () => {
+            stopScanner();
+        });
+    </script>
 </body>
 </html>
