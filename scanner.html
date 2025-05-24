@@ -2,43 +2,86 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Scanner VIN mobile (iOS & Android)</title>
+  <title>Scanner VIN amélioré</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Montserrat', sans-serif;
+      background-color: #f0f0f5;
+      margin: 0;
+      padding: 40px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      color: #222;
+    }
+    #container {
+      background: white;
+      padding: 25px 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+      max-width: 440px;
+      width: 100%;
       text-align: center;
-      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 18px;
+      font-weight: 700;
+      color: #E31937;
     }
     #reader {
+      margin: auto;
       width: 100%;
       max-width: 400px;
-      margin: auto;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 12px rgba(0,0,0,0.2);
     }
-    #vin-display, #status {
-      margin-top: 15px;
-      font-size: 18px;
+    #vin-display {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: 600;
+      word-break: break-word;
+      min-height: 28px;
+      color: #222;
+    }
+    #status {
+      margin-top: 6px;
+      font-size: 16px;
+      font-weight: 500;
+      color: #666;
+      min-height: 20px;
     }
     button {
-      margin-top: 20px;
+      margin-top: 30px;
       background-color: #E31937;
       color: white;
       border: none;
-      padding: 10px 25px;
-      font-size: 16px;
-      border-radius: 6px;
+      padding: 12px 30px;
+      font-size: 17px;
+      font-weight: 600;
+      border-radius: 30px;
       cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+      outline-offset: 2px;
+    }
+    button:hover {
+      background-color: #b21427;
     }
   </style>
 </head>
 <body>
 
-  <h1>Scanner le VIN</h1>
-  <div id="reader"></div>
-
-  <div id="vin-display">Aucun VIN scanné</div>
-  <div id="status">En attente du scan...</div>
-  <button id="stop-btn">Arrêter le scan</button>
+  <div id="container">
+    <h1>Scanner le VIN</h1>
+    <div id="reader"></div>
+    <div id="vin-display">Aucun VIN scanné</div>
+    <div id="status">En attente du scan...</div>
+    <button id="stop-btn">Arrêter le scan</button>
+  </div>
 
   <script>
     const vinDisplay = document.getElementById('vin-display');
@@ -47,54 +90,62 @@
 
     const html5QrCode = new Html5Qrcode("reader");
 
-    // Fonction pour sélectionner caméra arrière
     async function startScanner() {
       try {
         const devices = await Html5Qrcode.getCameras();
         if (!devices || devices.length === 0) {
-          status.textContent = "Aucune caméra détectée";
+          status.textContent = "❌ Aucune caméra détectée";
           return;
         }
 
-        // Trouver la caméra arrière (avec environnement dans le label)
+        // Caméra arrière : recherche par label et fallback au premier
         let backCamera = devices.find(cam =>
           cam.label.toLowerCase().includes("back") ||
           cam.label.toLowerCase().includes("rear") ||
           cam.label.toLowerCase().includes("environment")
         );
-
         if (!backCamera) backCamera = devices[0];
 
+        // Options de scan : fps 10, zone rectangulaire plus large pour VIN horizontal
         await html5QrCode.start(
           backCamera.id,
-          { fps: 10, qrbox: { width: 250, height: 100 } },
-          (decodedText) => {
+          {
+            fps: 10,
+            qrbox: { width: 320, height: 100 }, 
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true } // pour meilleure détection
+          },
+          decodedText => {
             const vin = decodedText.trim().toUpperCase();
             vinDisplay.textContent = `VIN scanné : ${vin}`;
 
-            // Validation VIN basique
             if (/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
-              status.textContent = "✅ VIN valide.";
+              status.textContent = "✅ VIN valide";
+              status.style.color = "#1a7f37"; // vert
             } else {
-              status.textContent = "⚠️ VIN invalide (doit être 17 caractères, sans I,O,Q)";
+              status.textContent = "⚠️ VIN invalide (17 caractères sans I,O,Q)";
+              status.style.color = "#b24343"; // rouge
             }
           },
-          (errorMessage) => {
-            // Peut ignorer les erreurs typiques de scan sans code détecté
-            // console.log("Pas de code détecté", errorMessage);
+          errorMessage => {
+            // ici on ignore les erreurs classiques de scan (pas trouvé, etc)
           }
         );
-        status.textContent = "Scanning en cours...";
+
+        status.textContent = "🎯 Scan en cours... Positionnez le VIN devant la caméra arrière.";
+        status.style.color = "#666";
       } catch (err) {
         status.textContent = `Erreur caméra: ${err}`;
+        status.style.color = "#b24343";
       }
     }
 
     stopBtn.addEventListener('click', () => {
       html5QrCode.stop().then(() => {
-        status.textContent = "Scan arrêté.";
+        status.textContent = "⏹️ Scan arrêté.";
+        status.style.color = "#666";
       }).catch(err => {
         status.textContent = `Erreur à l'arrêt: ${err}`;
+        status.style.color = "#b24343";
       });
     });
 
