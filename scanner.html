@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner VIN - Solution Alternative</title>
-    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+    <title>Reconnaissance de VIN par OCR</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,15 +17,18 @@
         #scanner-container {
             position: relative;
             width: 100%;
-            max-width: 600px;
+            max-width: 800px;
             margin: 20px 0;
         }
-        #interactive {
+        #video {
             width: 100%;
-            height: 400px;
+            max-height: 500px;
             border: 3px solid #E31937;
             border-radius: 8px;
             background-color: #000;
+        }
+        #canvas {
+            display: none;
         }
         #result {
             margin-top: 20px;
@@ -33,13 +36,13 @@
             font-size: 24px;
             font-weight: bold;
             text-align: center;
-            background-color: #fff;
+            background-color: white;
             border-radius: 8px;
             min-width: 300px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         button {
-            margin-top: 20px;
+            margin: 10px;
             padding: 12px 24px;
             background-color: #E31937;
             color: white;
@@ -54,107 +57,141 @@
         }
         .controls {
             display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 10px;
+        }
+        #loading {
+            display: none;
             margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Scanner de VIN avec QuaggaJS</h1>
+    <h1>Reconnaissance de VIN par OCR</h1>
     <div id="scanner-container">
-        <div id="interactive"></div>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
     </div>
-    <div id="result">Prêt à scanner...</div>
+    <div id="result">Prêt à analyser...</div>
     <div class="controls">
-        <button id="start-btn">Démarrer le Scan</button>
-        <button id="stop-btn">Arrêter</button>
+        <button id="startBtn">Démarrer la Caméra</button>
+        <button id="captureBtn">Capturer et Analyser</button>
+        <button id="stopBtn">Arrêter</button>
     </div>
+    <div id="loading">Analyse en cours...</div>
 
     <script>
-        const resultElement = document.getElementById('result');
-        const startBtn = document.getElementById('start-btn');
-        const stopBtn = document.getElementById('stop-btn');
-        let scannerActive = false;
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const resultDiv = document.getElementById('result');
+        const loadingDiv = document.getElementById('loading');
+        let stream = null;
 
-        // Configuration optimisée pour les VIN
-        const config = {
-            inputStream: {
-                name: "Live",
-                type: "LiveStream",
-                target: document.querySelector('#interactive'),
-                constraints: {
-                    width: { min: 640 },
-                    height: { min: 480 },
-                    facingMode: "environment", // Caméra arrière par défaut
-                    aspectRatio: { ideal: 1.333333 } // Ratio 4:3
-                },
-            },
-            locator: {
-                patchSize: "medium",
-                halfSample: true
-            },
-            numOfWorkers: 4,
-            decoder: {
-                readers: ["code_128_reader"], // Meilleur format pour les VIN
-                debug: {
-                    drawBoundingBox: true,
-                    showFrequency: true,
-                    drawScanline: true,
-                    showPattern: true
-                }
-            },
-            locate: true
-        };
-
-        // Démarrer le scanner
-        function startScanner() {
-            if (scannerActive) return;
-            
-            Quagga.init(config, function(err) {
-                if (err) {
-                    resultElement.textContent = "Erreur: " + err.message;
-                    resultElement.style.color = "#E31937";
-                    console.error(err);
-                    return;
-                }
-                
-                Quagga.onDetected(function(result) {
-                    const code = result.codeResult.code;
-                    if (/^[A-HJ-NPR-Z0-9]{17}$/.test(code)) {
-                        resultElement.textContent = "VIN: " + code;
-                        resultElement.style.color = "#1a7f37";
-                        
-                        // Option: Arrêter après détection
-                        // stopScanner();
-                    } else {
-                        resultElement.textContent = "Code invalide (17 caractères requis)";
-                        resultElement.style.color = "#E31937";
-                    }
+        // Démarrer la caméra
+        document.getElementById('startBtn').addEventListener('click', async () => {
+            try {
+                stopCamera();
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
                 });
+                video.srcObject = stream;
+                resultDiv.textContent = "Caméra activée - Placez le VIN dans le cadre";
+            } catch (err) {
+                resultDiv.textContent = "Erreur: " + err.message;
+                console.error(err);
+            }
+        });
+
+        // Capturer et analyser
+        document.getElementById('captureBtn').addEventListener('click', async () => {
+            if (!stream) {
+                resultDiv.textContent = "Veuillez d'abord démarrer la caméra";
+                return;
+            }
+
+            loadingDiv.style.display = "block";
+            resultDiv.textContent = "Traitement en cours...";
+
+            try {
+                // Ajuster le canvas à la taille de la vidéo
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Découper la zone centrale (où se trouve probablement le VIN)
+                const cropWidth = canvas.width * 0.8;
+                const cropHeight = canvas.height * 0.3;
+                const cropX = (canvas.width - cropWidth) / 2;
+                const cropY = (canvas.height - cropHeight) / 2;
+
+                const imageData = ctx.getImageData(cropX, cropY, cropWidth, cropHeight);
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = cropWidth;
+                tempCanvas.height = cropHeight;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.putImageData(imageData, 0, 0);
+
+                // Améliorer le contraste pour une meilleure reconnaissance
+                tempCtx.filter = "contrast(200%) brightness(120%) grayscale(100%)";
+                tempCtx.drawImage(tempCanvas, 0, 0);
+
+                // Utiliser Tesseract.js pour la reconnaissance
+                const { data: { text } } = await Tesseract.recognize(
+                    tempCanvas.toDataURL('image/jpeg', 0.9),
+                    'eng',
+                    {
+                        logger: m => console.log(m),
+                        tessedit_char_whitelist: 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789',
+                        preserve_interword_spaces: 1,
+                        tessjs_create_hocr: '0',
+                        tessjs_create_tsv: '0',
+                        tessjs_create_box: '0',
+                        tessjs_create_unlv: '0',
+                        tessjs_create_osd: '0'
+                    }
+                );
+
+                // Extraire le VIN (17 caractères alphanumériques)
+                const vinRegex = /[A-HJ-NPR-Z0-9]{17}/;
+                const vinMatch = text.replace(/\s/g, '').match(vinRegex);
                 
-                Quagga.start();
-                scannerActive = true;
-                resultElement.textContent = "Scan en cours...";
-                resultElement.style.color = "#333";
-            });
+                if (vinMatch) {
+                    resultDiv.textContent = "VIN détecté: " + vinMatch[0];
+                    resultDiv.style.color = "#1a7f37";
+                } else {
+                    resultDiv.textContent = "Aucun VIN valide détecté";
+                    resultDiv.style.color = "#E31937";
+                    console.log("Texte reconnu:", text);
+                }
+            } catch (err) {
+                resultDiv.textContent = "Erreur d'analyse: " + err.message;
+                console.error(err);
+            } finally {
+                loadingDiv.style.display = "none";
+            }
+        });
+
+        // Arrêter la caméra
+        document.getElementById('stopBtn').addEventListener('click', stopCamera);
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+                video.srcObject = null;
+                resultDiv.textContent = "Caméra arrêtée";
+            }
         }
 
-        // Arrêter le scanner
-        function stopScanner() {
-            if (!scannerActive) return;
-            
-            Quagga.stop();
-            scannerActive = false;
-            resultElement.textContent = "Scanner arrêté";
-            resultElement.style.color = "#666";
-        }
-
-        // Événements
-        startBtn.addEventListener('click', startScanner);
-        stopBtn.addEventListener('click', stopScanner);
-        
-        // Démarrer automatiquement
-        startScanner();
+        // Nettoyer à la fermeture
+        window.addEventListener('beforeunload', stopCamera);
     </script>
 </body>
 </html>
