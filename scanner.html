@@ -195,45 +195,53 @@
     </footer>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const returnUrl = urlParams.get('returnUrl') || 'eval.html';
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const returnUrl = urlParams.get('returnUrl') || 'eval.html';
+        
+        const codeReader = new ZXing.BrowserMultiFormatReader();
+        const videoElement = document.getElementById('scanner-video');
+        let scanActive = true;
+
+        // Démarrer le scan
+        codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
+            if (!scanActive) return;
             
-            const codeReader = new ZXing.BrowserMultiFormatReader();
-            const videoElement = document.getElementById('scanner-video');
-            
-            // Démarrer le scan
-            codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
-                if (result) {
-                    const scannedVin = result.text.toUpperCase();
-                    if (/^[A-HJ-NPR-Z0-9]{17}$/.test(scannedVin)) {
-                        // Fermer le scanner
-                        codeReader.reset();
-                        
-                        // Rediriger vers la page d'origine avec le VIN scanné
-                        window.location.href = returnUrl + (returnUrl.includes('?') ? '&' : '?') + 'scannedVin=' + encodeURIComponent(scannedVin);
-                    } else {
-                        alert('Code scanné invalide. Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)');
-                    }
+            if (result) {
+                const scannedVin = result.text.toUpperCase();
+                if (/^[A-HJ-NPR-Z0-9]{17}$/.test(scannedVin)) {
+                    scanActive = false;
+                    codeReader.reset();
+                    
+                    // Rediriger avec le VIN valide
+                    window.location.href = `${returnUrl}${returnUrl.includes('?') ? '&' : '?'}scannedVin=${encodeURIComponent(scannedVin)}`;
+                } else if (scanActive) {
+                    // Ne pas afficher l'alerte en boucle
+                    console.log('VIN non valide détecté:', scannedVin);
                 }
-                
-                if (err && !(err instanceof ZXing.NotFoundException)) {
-                    console.error(err);
+            }
+            
+            if (err && !(err instanceof ZXing.NotFoundException)) {
+                console.error(err);
+                if (scanActive) {
                     alert(`Erreur de scan: ${err}`);
                 }
-            });
-            
-            // Bouton Annuler
-            document.getElementById('cancel-scan').addEventListener('click', () => {
-                codeReader.reset();
-                window.location.href = returnUrl;
-            });
-            
-            // Nettoyer à la fermeture
-            window.addEventListener('beforeunload', () => {
-                codeReader.reset();
-            });
+            }
         });
-    </script>
+        
+        // Bouton Annuler
+        document.getElementById('cancel-scan').addEventListener('click', () => {
+            scanActive = false;
+            codeReader.reset();
+            window.location.href = returnUrl;
+        });
+        
+        // Nettoyer à la fermeture
+        window.addEventListener('beforeunload', () => {
+            scanActive = false;
+            codeReader.reset();
+        });
+    });
+</script>
 </body>
 </html>
