@@ -25,61 +25,74 @@
             border-radius: 5px;
             font-size: 16px;
             cursor: pointer;
+            margin: 10px;
+        }
+        #output {
             margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
         }
     </style>
     <script src="https://unpkg.com/@zxing/library@0.19.1"></script>
 </head>
 <body>
     <h1>Scanner le VIN</h1>
-    <p>Placez le code VIN dans le cadre de la caméra</p>
-    
+    <p>Appuyez sur "Démarrer le scan" et montrez un code VIN à la caméra.</p>
+
     <div id="scanner-container">
         <video id="scanner-video" autoplay muted playsinline></video>
     </div>
-    
+
+    <button id="start-scan">Démarrer le scan</button>
     <button id="cancel-scan">Annuler</button>
+
+    <div id="output">En attente...</div>
 
     <script>
         const codeReader = new ZXing.BrowserMultiFormatReader();
         const videoElem = document.getElementById('scanner-video');
+        const output = document.getElementById('output');
 
-        function startScanner() {
-            codeReader
-                .listVideoInputDevices()
-                .then(videoInputDevices => {
-                    if (videoInputDevices.length === 0) {
-                        alert("Aucun appareil vidéo détecté.");
-                        return;
+        let streamStarted = false;
+
+        document.getElementById('start-scan').addEventListener('click', async () => {
+            try {
+                const devices = await codeReader.listVideoInputDevices();
+
+                if (devices.length === 0) {
+                    output.textContent = 'Aucune caméra détectée.';
+                    return;
+                }
+
+                const selectedDeviceId = devices[0].deviceId;
+
+                codeReader.decodeFromVideoDevice(selectedDeviceId, videoElem, (result, err) => {
+                    if (result) {
+                        const scannedVin = result.text.toUpperCase();
+                        output.textContent = `Scanné : ${scannedVin}`;
+                        if (/^[A-HJ-NPR-Z0-9]{17}$/.test(scannedVin)) {
+                            window.opener?.postMessage({
+                                type: 'VIN_SCANNED',
+                                vin: scannedVin
+                            }, '*');
+                            codeReader.reset();
+                            window.close();
+                        } else {
+                            output.textContent = 'Le code scanné n’est pas un VIN valide.';
+                        }
                     }
 
-                    const selectedDeviceId = videoInputDevices[0].deviceId;
-
-                    codeReader.decodeFromVideoDevice(selectedDeviceId, videoElem, (result, err) => {
-                        if (result) {
-                            const scannedVin = result.text.toUpperCase();
-                            console.log("Résultat détecté : ", scannedVin);
-                            if (/^[A-HJ-NPR-Z0-9]{17}$/.test(scannedVin)) {
-                                window.opener?.postMessage({ 
-                                    type: 'VIN_SCANNED', 
-                                    vin: scannedVin 
-                                }, '*');
-                                codeReader.reset();
-                                window.close();
-                            } else {
-                                alert('VIN invalide. Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)');
-                            }
-                        }
-                        if (err && !(err instanceof ZXing.NotFoundException)) {
-                            console.error("Erreur du scanner : ", err);
-                        }
-                    });
-                })
-                .catch(err => {
-                    console.error("Erreur lors de l'accès aux périphériques vidéo :", err);
-                    alert("Impossible d'accéder à la caméra. Vérifiez les permissions.");
+                    if (err && !(err instanceof ZXing.NotFoundException)) {
+                        console.error(err);
+                        output.textContent = `Erreur : ${err}`;
+                    }
                 });
-        }
+
+            } catch (err) {
+                console.error('Erreur lors de l’accès à la caméra :', err);
+                output.textContent = 'Erreur d’accès caméra. Vérifiez les permissions.';
+            }
+        });
 
         document.getElementById('cancel-scan').addEventListener('click', () => {
             codeReader.reset();
@@ -89,8 +102,6 @@
         window.addEventListener('beforeunload', () => {
             codeReader.reset();
         });
-
-        window.addEventListener('load', startScanner);
     </script>
 </body>
 </html>
