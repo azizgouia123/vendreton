@@ -1,359 +1,65 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scanner VIN avec changement de caméra</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
+  <title>Scanner VIN</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
-    body {
-      font-family: 'Montserrat', sans-serif;
-      background-color: #f0f0f5;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      color: #222;
-    }
-    #container {
-      background: white;
-      padding: 25px 30px 40px;
-      border-radius: 12px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-      width: 95%;
-      max-width: 800px;
-      text-align: center;
-    }
-    h1 {
-      margin-bottom: 18px;
-      font-weight: 700;
-      color: #E31937;
-    }
     #reader {
-      margin: 20px auto;
       width: 100%;
       max-width: 600px;
       height: 400px;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 0 12px rgba(0,0,0,0.2);
-      position: relative;
-    }
-    #scan-region {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 80%;
-      height: 30%;
+      margin: 0 auto;
       border: 3px solid #E31937;
-      border-radius: 8px;
-      z-index: 10;
-      pointer-events: none;
     }
-    #vin-display {
-      margin-top: 20px;
-      font-size: 22px;
-      font-weight: 600;
-      word-break: break-word;
-      min-height: 28px;
-      color: #222;
-    }
-    #status {
-      margin-top: 10px;
-      font-size: 18px;
-      font-weight: 500;
-      color: #666;
-      min-height: 24px;
-    }
-    .button-group {
-      display: flex;
-      gap: 15px;
-      margin-top: 30px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    button {
-      background-color: #E31937;
-      color: white;
-      border: none;
-      padding: 14px 30px;
-      font-size: 18px;
-      font-weight: 600;
-      border-radius: 30px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      user-select: none;
-      outline-offset: 2px;
-      flex: 1;
-      min-width: 180px;
-    }
-    button:hover {
-      background-color: #b21427;
-    }
-    button.secondary {
-      background-color: #0056B3;
-    }
-    button.secondary:hover {
-      background-color: #003d7a;
-    }
-    #camera-switch {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    #zoom-controls {
-      margin-top: 15px;
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-    }
-    #zoom-controls button {
-      min-width: 50px;
-      padding: 10px;
-      font-size: 16px;
-    }
-    @media (max-width: 768px) {
-      #reader {
-        height: 300px;
-      }
-      button {
-        padding: 12px 20px;
-        font-size: 16px;
-        min-width: 140px;
-      }
+    #vin-result {
+      font-size: 24px;
+      text-align: center;
+      margin: 20px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-
-  <div id="container">
-    <h1>Scanner le VIN</h1>
-    <div id="reader">
-      <div id="scan-region"></div>
-    </div>
-    <div id="vin-display">Aucun VIN scanné</div>
-    <div id="status">Initialisation de la caméra...</div>
-    
-    <div id="zoom-controls">
-      <button id="zoom-in" class="secondary"><i class="fas fa-search-plus"></i></button>
-      <button id="zoom-out" class="secondary"><i class="fas fa-search-minus"></i></button>
-      <button id="zoom-reset" class="secondary"><i class="fas fa-sync-alt"></i></button>
-    </div>
-    
-    <div class="button-group">
-      <button id="switch-btn" class="secondary">
-        <span id="camera-switch">
-          <i class="fas fa-camera"></i> Changer de caméra
-        </span>
-      </button>
-      <button id="stop-btn">Arrêter le scan</button>
-    </div>
-  </div>
-
-  <!-- Font Awesome pour les icônes -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <div id="reader"></div>
+  <div id="vin-result">Aucun VIN détecté</div>
 
   <script>
-    const vinDisplay = document.getElementById('vin-display');
-    const status = document.getElementById('status');
-    const stopBtn = document.getElementById('stop-btn');
-    const switchBtn = document.getElementById('switch-btn');
-    const zoomInBtn = document.getElementById('zoom-in');
-    const zoomOutBtn = document.getElementById('zoom-out');
-    const zoomResetBtn = document.getElementById('zoom-reset');
-    const scanRegion = document.getElementById('scan-region');
-
     const html5QrCode = new Html5Qrcode("reader");
-    let currentCamera = 'environment'; // 'environment' = caméra arrière, 'user' = caméra avant
-    let isScanning = false;
-    let currentStream = null;
-    let currentZoom = 1;
+    const vinResult = document.getElementById("vin-result");
 
-    // Configuration du focus automatique
-    async function configureFocus(stream) {
-      if (!stream) return;
-      
-      const videoTrack = stream.getVideoTracks()[0];
-      if (!videoTrack) return;
-      
-      const capabilities = videoTrack.getCapabilities();
-      const settings = videoTrack.getSettings();
-      
-      // Vérifie si le focus est supporté
-      if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-        try {
-          await videoTrack.applyConstraints({
-            advanced: [{ focusMode: 'continuous' }]
-          });
-          console.log("Focus automatique activé");
-        } catch (err) {
-          console.warn("Impossible d'activer le focus automatique:", err);
+    // Démarrer le scanner avec une configuration optimisée pour les VIN
+    html5QrCode.start(
+      { facingMode: "environment" }, // Caméra arrière
+      {
+        fps: 10,
+        qrbox: { width: 300, height: 150 }, // Grande zone de scan
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.CODE_128, // Format standard des VIN
+          Html5QrcodeSupportedFormats.CODE_39
+        ],
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true,
+          useBarcodeDetectorIfSupported: true // Double compatibilité
         }
+      },
+      (decodedText) => {
+        // Vérification du format VIN (17 caractères alphanumériques)
+        if (/^[A-HJ-NPR-Z0-9]{17}$/i.test(decodedText)) {
+          vinResult.textContent = `VIN valide : ${decodedText.toUpperCase()}`;
+          // html5QrCode.stop(); // Optionnel : arrêter après succès
+        } else {
+          vinResult.textContent = "⚠️ Code incorrect (17 caractères requis)";
+        }
+      },
+      (errorMessage) => {
+        // Ignorer les erreurs normales de non-détection
       }
-      
-      // Sauvegarde le stream pour les contrôles de zoom
-      currentStream = stream;
-    }
-
-    // Fonction pour ajuster le zoom
-    async function adjustZoom(zoomFactor) {
-      if (!currentStream) return;
-      
-      const videoTrack = currentStream.getVideoTracks()[0];
-      if (!videoTrack) return;
-      
-      const capabilities = videoTrack.getCapabilities();
-      const settings = videoTrack.getSettings();
-      
-      if (capabilities.zoom) {
-        try {
-          let newZoom = currentZoom * zoomFactor;
-          
-          // Limite le zoom aux capacités de la caméra
-          newZoom = Math.max(capabilities.zoom.min, Math.min(capabilities.zoom.max, newZoom));
-          
-          await videoTrack.applyConstraints({
-            advanced: [{ zoom: newZoom }]
-          });
-          
-          currentZoom = newZoom;
-          console.log("Zoom ajusté à:", currentZoom);
-        } catch (err) {
-          console.warn("Impossible d'ajuster le zoom:", err);
-        }
-      }
-    }
-
-    async function startScanner(cameraType) {
-      try {
-        // Arrêter le scan en cours si actif
-        if (isScanning) {
-          await html5QrCode.stop();
-          isScanning = false;
-          if (currentStream) {
-            currentStream.getTracks().forEach(track => track.stop());
-          }
-        }
-
-        // Démarrer avec le type de caméra spécifié
-        status.textContent = `Initialisation de la caméra ${cameraType === 'environment' ? 'arrière' : 'avant'}...`;
-        status.style.color = "#666";
-        
-        const config = {
-          fps: 10,
-          qrbox: { width: 250, height: 150 },
-          experimentalFeatures: { 
-            useBarCodeDetectorIfSupported: true,
-          },
-          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-        };
-        
-        const cameraConfig = cameraType === 'environment' 
-          ? { facingMode: { exact: "environment" } } 
-          : { facingMode: "user" };
-        
-        await html5QrCode.start(
-          cameraConfig,
-          config,
-          decodedText => {
-            const vin = decodedText.trim().toUpperCase();
-            vinDisplay.textContent = `VIN scanné : ${vin}`;
-
-            if (/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
-              status.textContent = "✅ VIN valide";
-              status.style.color = "#1a7f37";
-              // Optionnel : Arrêter après un scan réussi
-              // html5QrCode.stop().then(() => {
-              //   window.opener.postMessage({ vin: vin }, window.location.origin);
-              //   window.close();
-              // });
-            } else {
-              status.textContent = "⚠️ VIN invalide (17 caractères sans I,O,Q)";
-              status.style.color = "#b24343";
-            }
-          },
-          errorMessage => {
-            // Ignorer les erreurs de scan normales
-          }
-        ).then(stream => {
-          configureFocus(stream);
-          return stream;
-        });
-
-        isScanning = true;
-        currentCamera = cameraType;
-        status.textContent = `🎯 Scan en cours (caméra ${cameraType === 'environment' ? 'arrière' : 'avant'})... Positionnez le VIN dans la zone de scan.`;
-        status.style.color = "#666";
-        
-      } catch (err) {
-        status.textContent = `Erreur caméra: ${err.message || err}`;
-        status.style.color = "#b24343";
-        console.error("Erreur de démarrage de la caméra:", err);
-        
-        // Tenter l'autre caméra en fallback
-        const fallbackCamera = cameraType === 'environment' ? 'user' : 'environment';
-        status.textContent += ` Tentative avec la caméra ${fallbackCamera === 'environment' ? 'arrière' : 'avant'}...`;
-        
-        try {
-          await startScanner(fallbackCamera);
-        } catch (fallbackErr) {
-          status.textContent = `Erreur irrécupérable: Aucune caméra fonctionnelle. ${fallbackErr.message || fallbackErr}`;
-          status.style.color = "#b24343";
-          console.error("Erreur de démarrage de la caméra de fallback:", fallbackErr);
-        }
-      }
-    }
-
-    // Bouton pour changer de caméra
-    switchBtn.addEventListener('click', async () => {
-      const newCamera = currentCamera === 'environment' ? 'user' : 'environment';
-      await startScanner(newCamera);
+    ).catch((err) => {
+      console.error("Erreur du scanner :", err);
+      vinResult.textContent = "Erreur : " + err.message;
     });
-
-    // Bouton pour arrêter le scan
-    stopBtn.addEventListener('click', async () => {
-      try {
-        await html5QrCode.stop();
-        isScanning = false;
-        if (currentStream) {
-          currentStream.getTracks().forEach(track => track.stop());
-          currentStream = null;
-        }
-        status.textContent = "⏹️ Scan arrêté.";
-        status.style.color = "#666";
-      } catch (err) {
-        status.textContent = `Erreur à l'arrêt: ${err}`;
-        status.style.color = "#b24343";
-      }
-    });
-
-    // Contrôles de zoom
-    zoomInBtn.addEventListener('click', () => adjustZoom(1.2));
-    zoomOutBtn.addEventListener('click', () => adjustZoom(0.8));
-    zoomResetBtn.addEventListener('click', async () => {
-      currentZoom = 1;
-      if (currentStream) {
-        const videoTrack = currentStream.getVideoTracks()[0];
-        if (videoTrack) {
-          try {
-            await videoTrack.applyConstraints({
-              advanced: [{ zoom: currentZoom }]
-            });
-          } catch (err) {
-            console.warn("Impossible de réinitialiser le zoom:", err);
-          }
-        }
-      }
-    });
-
-    // Démarrer initialement avec la caméra arrière
-    startScanner('environment');
   </script>
-
 </body>
 </html>
