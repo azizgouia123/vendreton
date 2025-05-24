@@ -37,36 +37,36 @@
 </head>
 <body>
     <h1>Scanner le VIN</h1>
-    <p>Appuyez sur "Démarrer le scan" et montrez un code VIN à la caméra.</p>
+    <p>La caméra arrière est utilisée pour détecter le code VIN.</p>
 
     <div id="scanner-container">
         <video id="scanner-video" autoplay muted playsinline></video>
     </div>
 
-    <button id="start-scan">Démarrer le scan</button>
     <button id="cancel-scan">Annuler</button>
 
-    <div id="output">En attente...</div>
+    <div id="output">En attente du scan...</div>
 
     <script>
         const codeReader = new ZXing.BrowserMultiFormatReader();
         const videoElem = document.getElementById('scanner-video');
         const output = document.getElementById('output');
 
-        let streamStarted = false;
-
-        document.getElementById('start-scan').addEventListener('click', async () => {
+        async function startScanner() {
             try {
-                const devices = await codeReader.listVideoInputDevices();
+                const constraints = {
+                    video: {
+                        facingMode: { exact: "environment" }  // Caméra arrière
+                    }
+                };
 
-                if (devices.length === 0) {
-                    output.textContent = 'Aucune caméra détectée.';
-                    return;
-                }
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoElem.srcObject = stream;
 
-                const selectedDeviceId = devices[0].deviceId;
+                const track = stream.getVideoTracks()[0];
+                const deviceId = track.getSettings().deviceId;
 
-                codeReader.decodeFromVideoDevice(selectedDeviceId, videoElem, (result, err) => {
+                codeReader.decodeFromVideoDevice(deviceId, videoElem, (result, err) => {
                     if (result) {
                         const scannedVin = result.text.toUpperCase();
                         output.textContent = `Scanné : ${scannedVin}`;
@@ -76,29 +76,35 @@
                                 vin: scannedVin
                             }, '*');
                             codeReader.reset();
+                            stream.getTracks().forEach(track => track.stop());
                             window.close();
                         } else {
-                            output.textContent = 'Le code scanné n’est pas un VIN valide.';
+                            output.textContent = 'Le code détecté n’est pas un VIN valide.';
                         }
                     }
 
                     if (err && !(err instanceof ZXing.NotFoundException)) {
                         console.error(err);
-                        output.textContent = `Erreur : ${err}`;
+                        output.textContent = `Erreur : ${err.message}`;
                     }
                 });
 
-            } catch (err) {
-                console.error('Erreur lors de l’accès à la caméra :', err);
-                output.textContent = 'Erreur d’accès caméra. Vérifiez les permissions.';
+            } catch (error) {
+                console.error('Erreur d’accès à la caméra arrière :', error);
+                output.textContent = "Impossible d'accéder à la caméra arrière. Autorisation manquante ou caméra non disponible.";
             }
-        });
+        }
 
         document.getElementById('cancel-scan').addEventListener('click', () => {
             codeReader.reset();
+            const stream = videoElem.srcObject;
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
             window.close();
         });
 
+        window.addEventListener('load', startScanner);
         window.addEventListener('beforeunload', () => {
             codeReader.reset();
         });
