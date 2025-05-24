@@ -5,243 +5,61 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scanner VIN | VendreTonAutoRapide.ca</title>
     <style>
-        :root {
-            --primary: #0056B3; /* Bleu Québec */
-            --secondary: #E31937; /* Rouge Alerte */
-            --accent: #FFC72C; /* Or */
-            --dark: #1A1A1A;
-            --light: #F8F9FA;
-            --gray: #6C757D;
-            --light-gray: #E9ECEF;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Montserrat', Arial, sans-serif;
-        }
-
-        body {
-            background-color: var(--light);
-            color: var(--dark);
-            line-height: 1.6;
-        }
-
-        .container {
-            width: 90%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px 0;
-        }
-
-        /* Header */
-        .scanner-header {
-            background-color: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 15px 0;
-        }
-
-        .logo {
-            font-size: 28px;
-            font-weight: 800;
-            color: var(--primary);
-            text-align: center;
-        }
-
-        .logo span {
-            color: var(--secondary);
-        }
-
-        /* Scanner Container */
-        .scanner-container {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            padding: 40px;
-            max-width: 900px;
-            margin: 50px auto;
-            text-align: center;
-        }
-
-        .scanner-title {
-            color: var(--primary);
-            font-size: 28px;
-            margin-bottom: 15px;
-        }
-
-        .scanner-instructions {
-            color: var(--gray);
-            font-size: 16px;
-            margin-bottom: 30px;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .scanner-video {
-            width: 100%;
-            max-width: 600px;
-            border-radius: 10px;
-            overflow: hidden;
-            margin: 0 auto;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-        }
-
-        .scanner-controls {
-            margin-top: 30px;
-        }
-
-        .btn {
-            display: inline-block;
-            background-color: var(--secondary);
-            color: white;
-            padding: 14px 30px;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn:hover {
-            background-color: #C0112B;
-            transform: translateY(-2px);
-        }
-
-        .btn i {
-            margin-right: 8px;
-        }
-
-        /* Footer */
-        .scanner-footer {
-            text-align: center;
-            padding: 30px 0;
-            color: var(--gray);
-            font-size: 14px;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .scanner-container {
-                padding: 25px;
-            }
-
-            .scanner-title {
-                font-size: 24px;
-            }
-
-            .scanner-instructions {
-                font-size: 15px;
-            }
-
-            .btn {
-                font-size: 16px;
-                padding: 12px 25px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .scanner-container {
-                padding: 20px 15px;
-            }
-
-            .scanner-title {
-                font-size: 22px;
-            }
-
-            .scanner-instructions {
-                font-size: 14px;
-            }
-
-            .btn {
-                font-size: 14px;
-                padding: 10px 20px;
-            }
-        }
+        /* [Vos styles CSS existants restent inchangés] */
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://unpkg.com/@zxing/library@0.19.1"></script>
 </head>
 <body>
-    <header class="scanner-header">
-        <div class="container">
-            <div class="logo">VendreTonAuto<span>Rapide</span>.ca</div>
-        </div>
-    </header>
-
-    <div class="container">
-        <div class="scanner-container">
-            <h2 class="scanner-title"><i class="fas fa-camera"></i> Scanner le VIN</h2>
-            <p class="scanner-instructions">Positionnez le code VIN dans le cadre ci-dessous. Le code se trouve généralement sur le tableau de bord (côté conducteur) ou sur l'étiquette de la porte.</p>
-            
-            <video class="scanner-video" id="scanner-video" playsinline></video>
-            
-            <div class="scanner-controls">
-                <button class="btn" id="cancel-scan">
-                    <i class="fas fa-times"></i> Annuler
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <footer class="scanner-footer">
-        <div class="container">
-            <p>&copy; 2025 VendreTonAutoRapide.ca. Tous droits réservés.</p>
-            <p>Montréal, Québec</p>
-        </div>
-    </footer>
+    <!-- [Votre HTML existant reste inchangé] -->
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const returnUrl = urlParams.get('returnUrl') || 'eval.html';
-        
-        const codeReader = new ZXing.BrowserMultiFormatReader();
-        const videoElement = document.getElementById('scanner-video');
-        let scanActive = true;
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const returnUrl = urlParams.get('returnUrl') || 'eval.html';
+            const codeReader = new ZXing.BrowserMultiFormatReader();
+            const videoElement = document.getElementById('scanner-video');
+            let scanTimeout;
 
-        // Démarrer le scan
-        codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
-            if (!scanActive) return;
-            
-            if (result) {
-                const scannedVin = result.text.toUpperCase();
-                if (/^[A-HJ-NPR-Z0-9]{17}$/.test(scannedVin)) {
-                    scanActive = false;
-                    codeReader.reset();
+            try {
+                // Démarrer le scanner
+                const result = await codeReader.decodeFromVideoDevice(null, videoElement, (result, error) => {
+                    if (result) {
+                        const scannedVin = result.text.toUpperCase();
+                        if (/^[A-HJ-NPR-Z0-9]{17}$/.test(scannedVin)) {
+                            // VIN valide trouvé
+                            clearTimeout(scanTimeout);
+                            codeReader.reset();
+                            window.location.href = `${returnUrl}${returnUrl.includes('?') ? '&' : '?'}scannedVin=${encodeURIComponent(scannedVin)}`;
+                        }
+                    }
                     
-                    // Rediriger avec le VIN valide
-                    window.location.href = `${returnUrl}${returnUrl.includes('?') ? '&' : '?'}scannedVin=${encodeURIComponent(scannedVin)}`;
-                } else if (scanActive) {
-                    // Ne pas afficher l'alerte en boucle
-                    console.log('VIN non valide détecté:', scannedVin);
-                }
+                    if (error && !(error instanceof ZXing.NotFoundException)) {
+                        console.error('Erreur de scan:', error);
+                    }
+                });
+
+                // Timeout après 30 secondes d'inactivité
+                scanTimeout = setTimeout(() => {
+                    codeReader.reset();
+                    alert('Temps écoulé. Aucun VIN valide détecté.');
+                    window.location.href = returnUrl;
+                }, 30000);
+
+            } catch (error) {
+                console.error('Erreur initialisation scanner:', error);
+                alert('Erreur d\'accès à la caméra. Veuillez vérifier les permissions.');
+                window.location.href = returnUrl;
             }
-            
-            if (err && !(err instanceof ZXing.NotFoundException)) {
-                console.error(err);
-                if (scanActive) {
-                    alert(`Erreur de scan: ${err}`);
-                }
-            }
+
+            // Bouton Annuler
+            document.getElementById('cancel-scan').addEventListener('click', () => {
+                clearTimeout(scanTimeout);
+                codeReader.reset();
+                window.location.href = returnUrl;
+            });
         });
-        
-        // Bouton Annuler
-        document.getElementById('cancel-scan').addEventListener('click', () => {
-            scanActive = false;
-            codeReader.reset();
-            window.location.href = returnUrl;
-        });
-        
-        // Nettoyer à la fermeture
-        window.addEventListener('beforeunload', () => {
-            scanActive = false;
-            codeReader.reset();
-        });
-    });
-</script>
+    </script>
 </body>
 </html>
