@@ -716,7 +716,7 @@
                             <script>
                                 const currentYear = new Date().getFullYear();
                                 for (let year = currentYear; year >= 1990; year--) {
-                                    document.write(`<option value="<span class="math-inline">\{year\}"\></span>{year}</option>`);
+                                    document.write(`<option value="${year}">${year}</option>`);
                                 }
                             </script>
                         </select>
@@ -1155,9 +1155,15 @@
                 });
 
                 if (currentImageCount + filesToAddCount > maxFiles) {
-                    alert(`Vous ne pouvez télécharger qu'un maximum de <span class="math-inline">\{maxFiles\} photos pour la section "</span>{categoryId}". Vous avez actuellement ${currentImageCount} photos.`);
+                    alert(`Vous ne pouvez télécharger qu'un maximum de ${maxFiles} photos pour la section "${categoryId}". Vous avez actuellement ${currentImageCount} photos.`);
                     return; // Stop processing if limit exceeded
                 }
+
+                // Clear previous previews (if adding new set without explicitly deleting previous ones)
+                // If you want to *add* to existing, remove the following line:
+                // previewContainerElement.innerHTML = '';
+                // And instead, add a check for the current count.
+                // For this implementation, we will append, so we don't clear the container.
 
                 Array.from(files).forEach(file => {
                     if (file.type.startsWith('image/')) {
@@ -1170,7 +1176,7 @@
                         const reader = new FileReader();
                         reader.onload = (e) => {
                             const imgDataUrl = e.target.result;
-                            const imageId = `img-<span class="math-inline">\{categoryId\}\-</span>{Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // Unique ID
+                            const imageId = `img-${categoryId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // Unique ID
 
                             uploadedImages[categoryId].push({
                                 id: imageId,
@@ -1443,28 +1449,104 @@
 
         let html5QrCode; // Déclarer la variable pour l'instance du scanner en dehors de la fonction pour la persistance
 
-        scanVinBtn.addEventListener('click', () => {
-            qrReaderContainer.style.display = 'block'; // Afficher le conteneur du scanner
-            scanVinBtn.style.display = 'none'; // Cacher le bouton "Scanner"
-            stopScanBtn.style.display = 'inline-block'; // Afficher le bouton "Arrêter"
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log(`Code scanné = ${decodedText}`, decodedResult);
+            vinInput.value = decodedText; // Remplir le champ VIN avec le résultat
+            qrReaderResults.textContent = `VIN scanné: ${decodedText}`; // Afficher le résultat
+            stopScanner(); // Arrêter le scanner après un scan réussi
+            
+            // Tenter de décoder le VIN après le scan
+            document.getElementById('decodeVinBtn').click();
+        }
 
-            if (!html5QrCode) { // Si le scanner n'est pas encore initialisé
+        function onScanError(errorMessage) {
+            // console.warn(`Erreur de scan: ${errorMessage}`); // Pour le débogage
+            qrReaderResults.textContent = `Erreur de scan: ${errorMessage}`;
+        }
+
+        function startScanner() {
+            if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode("qr-reader");
             }
+            // Configuration de l'appareil (caméra arrière si disponible)
+            const qrCodeConfig = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                supportedScanTypes: [
+                    Html5QrcodeSupportedScanTypes.QR_CODE,
+                    Html5QrcodeSupportedScanTypes.AZTEC, // VINs can be Aztec codes
+                    Html5QrcodeSupportedScanTypes.CODE_39, // VINs can be Code 39
+                    Html5QrcodeSupportedScanTypes.CODE_93,
+                    Html5QrcodeSupportedScanTypes.CODE_128,
+                    Html5QrcodeSupportedScanTypes.DATA_MATRIX
+                ]
+            };
 
-            // Assurez-vous que le scanner n'est pas déjà en cours avant de le démarrer
-            if (!html5QrCode.is == 'eval.html' src = "https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>` était tronqué. J'ai corrigé cela pour que la balise de script soit complète et que le script se ferme correctement.
-2.  **Correction de la condition `if (!html5QrCode.is`** : La condition était incomplète (`if (!html5QrCode.is`). Elle a été corrigée pour être `if (!html5QrCode.is=)` ou pour vérifier l'état du scanner. La bonne façon de vérifier si le scanner est déjà démarré est d'utiliser `html5QrCode.getState() === Html5Qrcode.Html5QrcodeScannerState.SCANNING`. J'ai opté pour une approche plus simple en m'assurant que `html5QrCode` existe avant de le démarrer, et en gérant l'arrêt avant un nouveau démarrage si nécessaire.
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length) {
+                    // Utiliser la caméra arrière si disponible, sinon la première disponible
+                    const rearCamera = devices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('arrière'));
+                    const cameraId = rearCamera ? rearCamera.id : devices[0].id;
 
-Ces corrections devraient permettre au scanner de se lancer correctement lorsque vous appuyez sur le bouton "Scanner le VIN".
+                    html5QrCode.start(
+                        cameraId,
+                        qrCodeConfig,
+                        onScanSuccess,
+                        onScanError
+                    ).then(() => {
+                        qrReaderResults.textContent = "Scanner démarré. Veuillez placer le VIN devant la caméra.";
+                        qrReaderContainer.style.display = 'block';
+                        scanVinBtn.style.display = 'none';
+                        stopScanBtn.style.display = 'inline-block';
+                    }).catch(err => {
+                        qrReaderResults.textContent = `Erreur lors du démarrage du scanner: ${err}. Veuillez vérifier les permissions de la caméra.`;
+                        console.error('Erreur de démarrage du scanner:', err);
+                        qrReaderContainer.style.display = 'none'; // Cacher en cas d'échec grave
+                        scanVinBtn.style.display = 'inline-block';
+                        stopScanBtn.style.display = 'none';
+                    });
+                } else {
+                    qrReaderResults.textContent = "Aucune caméra détectée.";
+                    console.error("Aucune caméra détectée.");
+                    qrReaderContainer.style.display = 'none';
+                    scanVinBtn.style.display = 'inline-block';
+                    stopScanBtn.style.display = 'none';
+                }
+            }).catch(err => {
+                qrReaderResults.textContent = `Erreur lors de l'accès aux caméras: ${err}. Assurez-vous d'avoir accordé les permissions.`;
+                console.error('Erreur lors de la récupération des caméras:', err);
+                qrReaderContainer.style.display = 'none';
+                scanVinBtn.style.display = 'inline-block';
+                stopScanBtn.style.display = 'none';
+            });
+        }
 
-**Pour tester :**
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.getState() === Html5Qrcode.Html5QrcodeScannerState.SCANNING) {
+                html5QrCode.stop().then(() => {
+                    qrReaderResults.textContent = "Scanner arrêté.";
+                    qrReaderContainer.style.display = 'none'; // Cacher le conteneur du scanner
+                    scanVinBtn.style.display = 'inline-block'; // Afficher le bouton "Scanner"
+                    stopScanBtn.style.display = 'none'; // Cacher le bouton "Arrêter"
+                }).catch((err) => {
+                    console.error("Erreur lors de l'arrêt du scanner:", err);
+                    qrReaderResults.textContent = `Erreur lors de l'arrêt du scanner: ${err}`;
+                });
+            } else {
+                console.log("Le scanner n'est pas actif ou n'a pas été initialisé.");
+                qrReaderContainer.style.display = 'none';
+                scanVinBtn.style.display = 'inline-block';
+                stopScanBtn.style.display = 'none';
+            }
+        }
 
-1.  Enregistrez le code ci-dessus dans votre fichier `eval.html`.
-2.  Ouvrez `eval.html` dans un navigateur moderne (Chrome, Firefox, Edge, Safari).
-3.  Cliquez sur le bouton "Scanner le VIN".
-4.  Le navigateur devrait vous demander la permission d'accéder à votre caméra. Acceptez.
-5.  Le flux vidéo de votre caméra devrait apparaître dans le conteneur du scanner.
-6.  Placez un code-barres VIN ou un QR code devant la caméra. Une fois scanné, le champ VIN devrait se remplir et le scanner s'arrêter.
+        scanVinBtn.addEventListener('click', startScanner);
+        stopScanBtn.addEventListener('click', stopScanner);
 
-Si le problème persiste, veuillez vérifier la console de développement de votre navigateur (généralement accessible en appuyant sur F12) pour toute erreur JavaScript. Ces messages d'erreur sont cruciaux pour diagnostiquer ce qui ne va pas.
+        // Initial state: hide scanner container and stop button
+        qrReaderContainer.style.display = 'none';
+        stopScanBtn.style.display = 'none';
+        // End of VIN Scanner Code
+    </script>
+</body>
+</html>
