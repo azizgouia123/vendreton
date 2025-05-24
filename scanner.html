@@ -2,11 +2,11 @@
 <html lang="fr-ca">
 <head>
   <meta charset="UTF-8">
-  <title>Scanner VIN</title>
+  <title>Scanner VIN & décodage</title>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
     body {
-      font-family: 'Montserrat', sans-serif;
+      font-family: 'Arial', sans-serif;
       text-align: center;
       padding: 20px;
     }
@@ -15,10 +15,10 @@
       max-width: 500px;
       margin: auto;
     }
-    #vin-display {
+    #vin-display, #api-result {
       margin-top: 20px;
-      font-size: 20px;
-      font-weight: bold;
+      font-size: 18px;
+      white-space: pre-wrap;
     }
     #output {
       margin-top: 10px;
@@ -42,54 +42,65 @@
   <h1>Scanner le VIN</h1>
   <div id="reader"></div>
   <div id="vin-display">Aucun VIN détecté</div>
-  <div id="output">En attente de scan...</div>
+  <div id="output">En attente du scan...</div>
+  <div id="api-result"></div>
   <button id="stop-scan">Arrêter</button>
 
   <script>
     const vinDisplay = document.getElementById("vin-display");
     const output = document.getElementById("output");
+    const apiResult = document.getElementById("api-result");
     const stopBtn = document.getElementById("stop-scan");
     const html5QrCode = new Html5Qrcode("reader");
 
-    // Fonction de démarrage avec caméra arrière
+    function decodeVIN(vin) {
+      fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${vin}?format=json`)
+        .then(response => response.json())
+        .then(data => {
+          const results = data.Results;
+          const make = results.find(r => r.Variable === "Make")?.Value || "Inconnu";
+          const model = results.find(r => r.Variable === "Model")?.Value || "Inconnu";
+          const year = results.find(r => r.Variable === "Model Year")?.Value || "Inconnu";
+          apiResult.innerText = `🚗 Marque : ${make}\n📘 Modèle : ${model}\n📅 Année : ${year}`;
+        })
+        .catch(error => {
+          apiResult.innerText = "❌ Erreur lors de l'appel à l'API.";
+          console.error(error);
+        });
+    }
+
     Html5Qrcode.getCameras().then(devices => {
       if (devices.length === 0) {
         output.textContent = "❌ Aucune caméra détectée.";
         return;
       }
 
-      // Recherche d'une caméra arrière (back, environment, rear)
-      const backCamera = devices.find(d =>
+      // Cherche la caméra arrière
+      const backCam = devices.find(d =>
         d.label.toLowerCase().includes("back") ||
-        d.label.toLowerCase().includes("rear") ||
-        d.label.toLowerCase().includes("environment")
-      ) || devices[0]; // fallback caméra si pas de label
+        d.label.toLowerCase().includes("environment") ||
+        d.label.toLowerCase().includes("rear")
+      ) || devices[0];
 
       html5QrCode.start(
-        backCamera.id,
-        {
-          fps: 10,
-          qrbox: { width: 300, height: 200 }
-        },
+        backCam.id,
+        { fps: 10, qrbox: { width: 300, height: 200 } },
         (decodedText) => {
           const vin = decodedText.trim().toUpperCase();
           vinDisplay.textContent = `Scanné : ${vin}`;
 
-          // Vérifie si le code correspond à un VIN valide
           if (/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
-            output.textContent = "✅ VIN valide détecté. Fermeture...";
-            window.opener?.postMessage({ type: 'VIN_SCANNED', vin }, '*');
-            html5QrCode.stop().then(() => window.close());
+            output.textContent = "✅ VIN valide. Décodage en cours...";
+            decodeVIN(vin);
           } else {
-            output.textContent = "⚠️ Format VIN invalide (17 caractères alphanumériques, sans I, O, Q)";
+            output.textContent = "⚠️ Format VIN invalide (17 caractères sans I, O, Q)";
+            apiResult.innerText = "";
           }
         },
-        (errorMessage) => {
-          // On peut ignorer les erreurs temporaires de scan
-        }
+        (err) => { /* Erreurs ignorées */ }
       );
     }).catch(err => {
-      output.textContent = `❌ Erreur lors de l'accès à la caméra : ${err}`;
+      output.textContent = `❌ Erreur caméra : ${err}`;
     });
 
     stopBtn.addEventListener("click", () => {
