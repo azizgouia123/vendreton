@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reconnaissance de VIN par OCR</title>
+    <title>Scan de VIN - Zone Ligne Unique</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
         body {
@@ -22,13 +22,18 @@
         }
         #video {
             width: 100%;
-            max-height: 500px;
-            border: 3px solid #E31937;
-            border-radius: 8px;
+            max-height: 300px;
             background-color: #000;
         }
-        #canvas {
-            display: none;
+        #scan-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: #E31937;
+            box-shadow: 0 0 10px rgba(227, 25, 55, 0.7);
+            z-index: 10;
         }
         #result {
             margin-top: 20px;
@@ -44,22 +49,12 @@
         button {
             margin: 10px;
             padding: 12px 24px;
-            background-color: #E31937;
+            background-color: #0056B3;
             color: white;
             border: none;
             border-radius: 5px;
             font-size: 18px;
             cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #b21427;
-        }
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 10px;
         }
         #loading {
             display: none;
@@ -68,23 +63,18 @@
     </style>
 </head>
 <body>
-    <h1>Reconnaissance de VIN par OCR</h1>
+    <h1>Scan de VIN - Ligne Unique</h1>
     <div id="scanner-container">
         <video id="video" autoplay playsinline></video>
-        <canvas id="canvas"></canvas>
+        <div id="scan-line"></div>
     </div>
-    <div id="result">Prêt à analyser...</div>
-    <div class="controls">
-        <button id="startBtn">Démarrer la Caméra</button>
-        <button id="captureBtn">Capturer et Analyser</button>
-        <button id="stopBtn">Arrêter</button>
-    </div>
+    <div id="result">Prêt à scanner...</div>
+    <button id="startBtn">Démarrer</button>
+    <button id="captureBtn">Lire le VIN</button>
     <div id="loading">Analyse en cours...</div>
 
     <script>
         const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
         const resultDiv = document.getElementById('result');
         const loadingDiv = document.getElementById('loading');
         let stream = null;
@@ -98,14 +88,12 @@
                         facingMode: 'environment',
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
-                    },
-                    audio: false
+                    }
                 });
                 video.srcObject = stream;
-                resultDiv.textContent = "Caméra activée - Placez le VIN dans le cadre";
+                resultDiv.textContent = "Caméra prête - Alignez le VIN avec la ligne rouge";
             } catch (err) {
                 resultDiv.textContent = "Erreur: " + err.message;
-                console.error(err);
             }
         });
 
@@ -117,80 +105,59 @@
             }
 
             loadingDiv.style.display = "block";
-            resultDiv.textContent = "Traitement en cours...";
+            resultDiv.textContent = "Analyse...";
 
             try {
-                // Ajuster le canvas à la taille de la vidéo
+                // Créer un canvas temporaire
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
                 canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                canvas.height = 50; // Hauteur très réduite pour une seule ligne
 
-                // Découper la zone centrale (où se trouve probablement le VIN)
-                const cropWidth = canvas.width * 0.8;
-                const cropHeight = canvas.height * 0.3;
-                const cropX = (canvas.width - cropWidth) / 2;
-                const cropY = (canvas.height - cropHeight) / 2;
+                // Capturer uniquement la zone de la ligne rouge (centre de l'image)
+                const lineY = video.videoHeight / 2;
+                ctx.drawImage(video, 0, lineY - 25, video.videoWidth, 50, 0, 0, video.videoWidth, 50);
 
-                const imageData = ctx.getImageData(cropX, cropY, cropWidth, cropHeight);
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = cropWidth;
-                tempCanvas.height = cropHeight;
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCtx.putImageData(imageData, 0, 0);
+                // Améliorer le contraste
+                ctx.filter = "contrast(200%) brightness(120%) grayscale(100%)";
+                ctx.drawImage(canvas, 0, 0);
 
-                // Améliorer le contraste pour une meilleure reconnaissance
-                tempCtx.filter = "contrast(200%) brightness(120%) grayscale(100%)";
-                tempCtx.drawImage(tempCanvas, 0, 0);
-
-                // Utiliser Tesseract.js pour la reconnaissance
+                // Utiliser Tesseract avec configuration spéciale VIN
                 const { data: { text } } = await Tesseract.recognize(
-                    tempCanvas.toDataURL('image/jpeg', 0.9),
+                    canvas,
                     'eng',
-                    {
-                        logger: m => console.log(m),
+                    { 
                         tessedit_char_whitelist: 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789',
-                        preserve_interword_spaces: 1,
-                        tessjs_create_hocr: '0',
-                        tessjs_create_tsv: '0',
-                        tessjs_create_box: '0',
-                        tessjs_create_unlv: '0',
-                        tessjs_create_osd: '0'
+                        preserve_interword_spaces: 0
                     }
                 );
 
-                // Extraire le VIN (17 caractères alphanumériques)
-                const vinRegex = /[A-HJ-NPR-Z0-9]{17}/;
-                const vinMatch = text.replace(/\s/g, '').match(vinRegex);
+                // Extraire le VIN
+                const vin = text.replace(/[^A-HJ-NPR-Z0-9]/g, '').substring(0, 17);
                 
-                if (vinMatch) {
-                    resultDiv.textContent = "VIN détecté: " + vinMatch[0];
+                if (vin.length === 17) {
+                    resultDiv.textContent = `VIN: ${vin}`;
                     resultDiv.style.color = "#1a7f37";
                 } else {
-                    resultDiv.textContent = "Aucun VIN valide détecté";
+                    resultDiv.textContent = "VIN non valide (17 caractères requis)";
                     resultDiv.style.color = "#E31937";
-                    console.log("Texte reconnu:", text);
                 }
             } catch (err) {
-                resultDiv.textContent = "Erreur d'analyse: " + err.message;
-                console.error(err);
+                resultDiv.textContent = "Erreur: " + err.message;
             } finally {
                 loadingDiv.style.display = "none";
             }
         });
-
-        // Arrêter la caméra
-        document.getElementById('stopBtn').addEventListener('click', stopCamera);
 
         function stopCamera() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
                 stream = null;
                 video.srcObject = null;
-                resultDiv.textContent = "Caméra arrêtée";
             }
         }
 
-        // Nettoyer à la fermeture
+        // Nettoyage
         window.addEventListener('beforeunload', stopCamera);
     </script>
 </body>
