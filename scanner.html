@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Scanner VIN avec caméra arrière forcée</title>
+  <title>Scanner VIN</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
   <style>
@@ -54,12 +54,18 @@
       color: #666;
       min-height: 20px;
     }
-    button {
+    .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 15px; /* Espace entre les boutons */
       margin-top: 30px;
+      flex-wrap: wrap; /* Pour les petits écrans */
+    }
+    button {
       background-color: #E31937;
       color: white;
       border: none;
-      padding: 12px 30px;
+      padding: 12px 20px;
       font-size: 17px;
       font-weight: 600;
       border-radius: 30px;
@@ -67,9 +73,25 @@
       transition: background-color 0.3s ease;
       user-select: none;
       outline-offset: 2px;
+      flex-grow: 1; /* Permet aux boutons de grandir pour remplir l'espace */
+      max-width: 180px; /* Limite la largeur maximale des boutons */
     }
     button:hover {
       background-color: #b21427;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    #camera-select {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 16px;
+      width: calc(100% - 40px); /* Pour s'aligner avec le conteneur */
+      max-width: 400px;
+      display: none; /* Caché par défaut */
     }
   </style>
 </head>
@@ -80,21 +102,105 @@
     <div id="reader"></div>
     <div id="vin-display">Aucun VIN scanné</div>
     <div id="status">En attente du scan...</div>
-    <button id="stop-btn">Arrêter le scan</button>
+
+    <select id="camera-select" title="Sélectionner une caméra"></select>
+
+    <div class="button-group">
+      <button id="start-btn">Démarrer le scan</button>
+      <button id="stop-btn" disabled>Arrêter le scan</button>
+    </div>
   </div>
 
   <script>
     const vinDisplay = document.getElementById('vin-display');
     const status = document.getElementById('status');
+    const startBtn = document.getElementById('start-btn');
     const stopBtn = document.getElementById('stop-btn');
+    const cameraSelect = document.getElementById('camera-select');
 
     const html5QrCode = new Html5Qrcode("reader");
+    let currentCameraId = null; // ID de la caméra actuellement utilisée
+    let availableCameras = []; // Liste des caméras détectées
 
-    async function startScanner() {
+    // Fonction pour mettre à jour l'état des boutons
+    function updateButtonStates(isScanning) {
+      startBtn.disabled = isScanning;
+      stopBtn.disabled = !isScanning;
+      cameraSelect.disabled = isScanning;
+    }
+
+    // Initialise la liste des caméras disponibles
+    async function populateCameraSelect() {
       try {
-        // Tente de démarrer avec la caméra arrière (facingMode: environment)
+        availableCameras = await Html5Qrcode.getCameras();
+        cameraSelect.innerHTML = ''; // Vide les options précédentes
+
+        if (availableCameras && availableCameras.length > 0) {
+          cameraSelect.style.display = 'block'; // Affiche la liste déroulante
+
+          availableCameras.forEach(camera => {
+            const option = document.createElement('option');
+            option.value = camera.id;
+            // Tente de donner un nom plus descriptif
+            let cameraName = camera.label || `Caméra ${camera.id.substring(0, 5)}...`;
+            if (cameraName.toLowerCase().includes("back") || cameraName.toLowerCase().includes("rear") || cameraName.toLowerCase().includes("environment")) {
+              cameraName += " (Arrière)";
+            } else if (cameraName.toLowerCase().includes("front") || cameraName.toLowerCase().includes("user")) {
+              cameraName += " (Avant)";
+            }
+            option.textContent = cameraName;
+            cameraSelect.appendChild(option);
+          });
+
+          // Tente de sélectionner la caméra arrière par défaut
+          const backCamera = availableCameras.find(device =>
+            device.label.toLowerCase().includes("back") ||
+            device.label.toLowerCase().includes("rear") ||
+            device.label.toLowerCase().includes("environment")
+          );
+
+          if (backCamera) {
+            cameraSelect.value = backCamera.id;
+            currentCameraId = backCamera.id;
+          } else {
+            // Si pas de caméra arrière trouvée, sélectionne la première
+            cameraSelect.value = availableCameras[0].id;
+            currentCameraId = availableCameras[0].id;
+          }
+
+          // Démarre le scan automatiquement avec la caméra sélectionnée (arrière par défaut)
+          startScanner(currentCameraId);
+
+        } else {
+          status.textContent = "❌ Aucune caméra détectée sur cet appareil.";
+          status.style.color = "#b24343";
+          startBtn.disabled = true;
+          cameraSelect.style.display = 'none';
+        }
+      } catch (err) {
+        status.textContent = `Erreur lors de la détection des caméras: ${err.message || err}. Vérifiez les permissions.`;
+        status.style.color = "#b24343";
+        startBtn.disabled = true;
+        cameraSelect.style.display = 'none';
+        console.error("Erreur Html5Qrcode.getCameras():", err);
+      }
+    }
+
+    // Fonction pour démarrer le scanner avec un ID de caméra donné
+    async function startScanner(cameraId) {
+      if (html5QrCode.is	Scanning) {
+        await html5QrCode.stop(); // Arrête le scan actuel si un autre est en cours
+      }
+      currentCameraId = cameraId; // Met à jour l'ID de la caméra courante
+
+      try {
+        updateButtonStates(true); // Désactive le bouton de démarrage, active l'arrêt
+        status.textContent = "🎯 Scan en cours... Positionnez le VIN devant la caméra.";
+        status.style.color = "#666";
+        vinDisplay.textContent = "Aucun VIN scanné"; // Réinitialise l'affichage du VIN
+
         await html5QrCode.start(
-          { facingMode: { exact: "environment" } }, // Force la caméra arrière
+          cameraId, // Utilise l'ID de la caméra sélectionnée
           {
             fps: 10,
             qrbox: { width: 320, height: 100 },
@@ -107,67 +213,67 @@
             if (/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
               status.textContent = "✅ VIN valide";
               status.style.color = "#1a7f37";
-              // Optionnel : Si vous voulez arrêter le scan après un VIN valide
-              // html5QrCode.stop();
-              // window.opener.postMessage({ vin: vin }, window.location.origin); // Envoyez le VIN à la page parente
-              // window.close(); // Fermez la fenêtre du scanner
+              // Optionnel : Envoyer le VIN et fermer la fenêtre
+              if (window.opener) {
+                window.opener.postMessage({ vin: vin }, window.location.origin);
+              }
+              html5QrCode.stop().then(() => {
+                setTimeout(() => { // Donne un peu de temps pour la fermeture propre
+                  window.close();
+                }, 500);
+              }).catch(e => console.error("Erreur à l'arrêt après VIN valide:", e));
+
             } else {
               status.textContent = "⚠️ VIN invalide (17 caractères sans I,O,Q)";
               status.style.color = "#b24343";
             }
           },
           errorMessage => {
-            // Erreurs classiques ignorées, par exemple "No QR code found"
+            // Erreurs de détection classiques, ignorées pour ne pas surcharger le statut
           }
         );
-
-        status.textContent = "🎯 Scan en cours... Positionnez le VIN devant la caméra arrière.";
-        status.style.color = "#666";
       } catch (err) {
-        status.textContent = `Erreur caméra: ${err.message || err}. Vérifiez les permissions ou si une caméra arrière est disponible.`;
+        status.textContent = `Erreur de démarrage de la caméra: ${err.message || err}. Vérifiez les permissions.`;
         status.style.color = "#b24343";
-        console.error("Erreur de démarrage de la caméra:", err);
-        // Fallback optionnel : Si le mode "environment" échoue, tentez le mode "user" (caméra avant)
-        /*
-        try {
-          console.log("Tentative de démarrage avec la caméra avant (facingMode: user) en fallback.");
-          await html5QrCode.start(
-            { facingMode: "user" }, // Fallback vers la caméra avant
-            {
-              fps: 10,
-              qrbox: { width: 320, height: 100 },
-              experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-            },
-            decodedText => {
-              const vin = decodedText.trim().toUpperCase();
-              vinDisplay.textContent = `VIN scanné : ${vin}`;
-              status.textContent = "✅ VIN valide (Caméra avant)";
-              status.style.color = "#1a7f37";
-            },
-            errorMessage => {}
-          );
-          status.textContent = "🎯 Scan en cours (caméra avant)... Positionnez le VIN devant la caméra.";
-          status.style.color = "#666";
-        } catch (fallbackErr) {
-          status.textContent = `Erreur irrécupérable: Aucune caméra fonctionnelle. ${fallbackErr.message || fallbackErr}`;
-          status.style.color = "#b24343";
-          console.error("Erreur de démarrage de la caméra de fallback:", fallbackErr);
-        }
-        */
+        updateButtonStates(false); // Réactive le bouton de démarrage
+        console.error("Erreur de démarrage html5QrCode.start():", err);
       }
     }
 
-    stopBtn.addEventListener('click', () => {
-      html5QrCode.stop().then(() => {
-        status.textContent = "⏹️ Scan arrêté.";
-        status.style.color = "#666";
-      }).catch(err => {
-        status.textContent = `Erreur à l'arrêt: ${err}`;
+    // Événements des boutons et du sélecteur
+    startBtn.addEventListener('click', () => {
+      if (currentCameraId) {
+        startScanner(currentCameraId);
+      } else if (availableCameras.length > 0) {
+        startScanner(availableCameras[0].id); // Démarre la première si aucune n'est sélectionnée
+      } else {
+        status.textContent = "Impossible de démarrer: aucune caméra disponible.";
         status.style.color = "#b24343";
-      });
+      }
     });
 
-    startScanner();
+    stopBtn.addEventListener('click', async () => {
+      if (html5QrCode.isScanning) {
+        await html5QrCode.stop();
+        status.textContent = "⏹️ Scan arrêté.";
+        status.style.color = "#666";
+        updateButtonStates(false);
+      }
+    });
+
+    cameraSelect.addEventListener('change', (event) => {
+      currentCameraId = event.target.value;
+      // Redémarre le scanner avec la nouvelle caméra si un scan était en cours
+      if (!html5QrCode.isScanning) { // Si le scan est déjà arrêté, ne le redémarre pas automatiquement.
+        status.textContent = "Caméra sélectionnée. Cliquez sur 'Démarrer le scan'.";
+        status.style.color = "#666";
+      } else {
+        startScanner(currentCameraId);
+      }
+    });
+
+    // Initialisation: détecte les caméras et démarre avec la caméra par défaut (arrière si possible)
+    populateCameraSelect();
   </script>
 
 </body>
