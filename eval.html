@@ -503,6 +503,17 @@
             background-color: #5a6268;
         }
 
+        .scanner-instructions {
+            font-size: 15px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            color: #555;
+        }
+        .scanner-instructions i {
+            margin-right: 5px;
+            color: var(--primary);
+        }
+
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -635,6 +646,9 @@
 
                     <div id="qr-reader-container" class="full-width">
                         <h4>Scannez le code-barres VIN</h4>
+                        <p class="scanner-instructions">
+                            <i class="fas fa-info-circle"></i> Placez le code-barres VIN de votre véhicule entièrement à l'intérieur de la boîte de scan verte. Assurez-vous d'avoir une bonne lumière et tenez votre téléphone stable.
+                        </p>
                         <div id="qr-reader"></div>
                         <button type="button" id="closeScannerBtn" class="btn close-scanner-btn">Fermer le scanner</button>
                     </div>
@@ -964,7 +978,8 @@
             // Configuration for the scanner
             const scannerConfig = {
                 fps: 10,
-                qrbox: { width: 250, height: 150 }
+                qrbox: { width: 280, height: 120 }, // Optimized for horizontal VIN barcodes
+                formatsToDecode: [Html5QrcodeSupportedFormats.CODE_39] // Explicitly look for Code 39 for VINs
             };
 
             // Success callback
@@ -976,7 +991,10 @@
 
             // Error callback
             const onScanError = (errorMessage) => {
-                // console.warn(`QR Code Scan Error: ${errorMessage}`);
+                // Log all errors for debugging when troubleshooting 'no scan'
+                console.warn(`QR Code Scan Error: ${errorMessage}`);
+                // Note: This function is called frequently when no code is found,
+                // so avoid alerts here to prevent spamming the user.
             };
 
             // Attempt to start with environment (back) camera
