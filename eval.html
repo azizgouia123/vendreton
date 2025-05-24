@@ -689,7 +689,7 @@
         const vinResultsDiv = document.getElementById('vin-decoder-results');
         const decodeVinBtn = document.getElementById('decodeVinBtn');
 
-        // NOUVEAU: Écouteur d'événements pour ouvrir la page du scanner
+        // Écouteur d'événements pour ouvrir la page du scanner
         document.getElementById('startScannerBtn').addEventListener('click', () => {
             // Ouvre vin_scanner_page.html dans un nouvel onglet/fenêtre
             // Utilisez '_blank' pour ouvrir dans un nouvel onglet/fenêtre.
@@ -701,7 +701,7 @@
         // Écouteur pour le bouton de décodage manuel
         decodeVinBtn.addEventListener('click', decodeVin);
 
-        // NOUVEAU: Écouteur pour les messages provenant de la fenêtre du scanner
+        // Écouteur pour les messages provenant de la fenêtre du scanner
         window.addEventListener('message', (event) => {
             // IMPORTANT: Vérifiez l'origine du message pour des raisons de sécurité.
             // En production, remplacez 'window.location.origin' par votre domaine réel.
@@ -716,7 +716,7 @@
             if (event.data && event.data.vin) {
                 const scannedVin = event.data.vin;
                 vinInput.value = scannedVin.trim().toUpperCase(); // Nettoie et met en majuscules
-                decodeVin(); // Décode le VIN automatiquement une fois reçu
+                decodeVin(); // Décode le VIN automatiquement une_fois reçu
             }
         });
 
