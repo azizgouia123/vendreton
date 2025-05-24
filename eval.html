@@ -961,41 +961,68 @@
         }
 
         function startScanningProcess() {
-            Html5Qrcode.getCameras().then(devices => {
-                if (devices && devices.length) {
-                    // Prefer the back camera if available, otherwise use the first one
-                    const rearCamera = devices.find(device => device.label.toLowerCase().includes('back'));
-                    const cameraId = rearCamera ? rearCamera.id : devices[0].id;
+            // Configuration for the scanner
+            const scannerConfig = {
+                fps: 10,
+                qrbox: { width: 250, height: 150 }
+            };
 
-                    html5QrCode.start(
-                        cameraId, {
-                            fps: 10, // Frames per second
-                            qrbox: { width: 250, height: 150 } // Size of the scanning box
-                        },
-                        (decodedText, decodedResult) => {
-                            // onDecodeSuccess
-                            vinInput.value = decodedText.trim().toUpperCase();
-                            decodeVin(); // Decode the scanned VIN
-                            stopScanner(); // Stop the scanner after successful scan
-                        },
-                        (errorMessage) => {
-                            // onError (optional) - you can log or display scan errors
-                            // console.warn(`QR Code Scan Error: ${errorMessage}`);
-                            // Suppress frequent errors to avoid alert spam, but keep logging for debug
+            // Success callback
+            const onScanSuccess = (decodedText, decodedResult) => {
+                vinInput.value = decodedText.trim().toUpperCase();
+                decodeVin();
+                stopScanner();
+            };
+
+            // Error callback
+            const onScanError = (errorMessage) => {
+                // console.warn(`QR Code Scan Error: ${errorMessage}`);
+            };
+
+            // Attempt to start with environment (back) camera
+            html5QrCode.start(
+                { facingMode: { exact: "environment" } }, // Prefer back camera
+                scannerConfig,
+                onScanSuccess,
+                onScanError
+            ).catch(initialErr => {
+                console.warn("Failed to start with environment camera, attempting specific device IDs. Error:", initialErr);
+
+                // Fallback: Get all cameras and try to find a 'back' camera or the first one
+                Html5Qrcode.getCameras().then(devices => {
+                    if (devices && devices.length) {
+                        let selectedCameraId = null;
+
+                        // Try to find a camera explicitly labeled as 'back'
+                        const rearCamera = devices.find(device => device.label.toLowerCase().includes('back'));
+                        if (rearCamera) {
+                            selectedCameraId = rearCamera.id;
+                        } else {
+                            // If no 'back' label, use the first available camera
+                            selectedCameraId = devices[0].id;
+                            console.warn("No 'back' camera found by label, using the first available camera:", devices[0].label);
                         }
-                    ).catch((err) => {
-                        console.error(`Unable to start scanning: ${err}`);
-                        alert('Impossible de démarrer le scanner. Assurez-vous d\'avoir une caméra connectée et d\'accorder la permission. Erreur: ' + err.message);
-                        stopScanner(); // Hide the container on error
-                    });
-                } else {
-                    alert("Aucune caméra trouvée pour le scan de VIN. Veuillez vous assurer que votre appareil dispose d'une caméra.");
-                    stopScanner(); // Hide the container on error
-                }
-            }).catch(err => {
-                console.error(`Error getting camera devices: ${err}`);
-                alert("Erreur lors de l'accès aux caméras. Veuillez vérifier vos permissions de caméra. Erreur: " + err.message);
-                stopScanner(); // Hide the container on error
+
+                        // Try to start the scanner with the selected device ID
+                        html5QrCode.start(
+                            selectedCameraId,
+                            scannerConfig,
+                            onScanSuccess,
+                            onScanError
+                        ).catch(fallbackErr => {
+                            console.error(`Unable to start scanning after fallback attempt: ${fallbackErr}`);
+                            alert('Impossible de démarrer le scanner. Assurez-vous d\'avoir une caméra connectée et d\'accorder la permission. Erreur: ' + fallbackErr.message);
+                            stopScanner();
+                        });
+                    } else {
+                        alert("Aucune caméra trouvée pour le scan de VIN. Veuillez vous assurer que votre appareil dispose d'une caméra.");
+                        stopScanner();
+                    }
+                }).catch(getCamerasErr => {
+                    console.error(`Error getting camera devices for fallback: ${getCamerasErr}`);
+                    alert("Erreur lors de l'accès aux caméras pour le fallback. Veuillez vérifier vos permissions de caméra. Erreur: " + getCamerasErr.message);
+                    stopScanner();
+                });
             });
         }
 
@@ -1005,7 +1032,6 @@
                     html5QrCode.stop().then(() => {
                         console.log("QR Code scanner stopped.");
                         qrReaderContainer.style.display = 'none';
-                        // Reset the Html5Qrcode instance to allow re-initialization if needed
                         // html5QrCode.clear(); // This might be too aggressive, just stopping is usually enough
                         resolve();
                     }).catch((err) => {
