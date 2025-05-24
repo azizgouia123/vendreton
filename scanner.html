@@ -20,6 +20,11 @@
             font-size: 18px;
             font-weight: bold;
         }
+        #vin-display {
+            margin-top: 10px;
+            font-size: 20px;
+            color: #333;
+        }
         button {
             background-color: #E31937;
             color: white;
@@ -35,10 +40,12 @@
 <body>
     <h1>Scanner le VIN</h1>
     <div id="reader"></div>
+    <div id="vin-display">Aucun VIN scanné pour l'instant.</div>
     <div id="output">En attente...</div>
     <button id="stop-scan">Arrêter</button>
 
     <script>
+        const vinDisplay = document.getElementById("vin-display");
         const output = document.getElementById("output");
         const stopButton = document.getElementById("stop-scan");
         const html5QrCode = new Html5Qrcode("reader");
@@ -48,22 +55,21 @@
 
             html5QrCode.start(
                 backCamera.id,
-                {
-                    fps: 10,
-                    qrbox: { width: 300, height: 200 }
-                },
+                { fps: 10, qrbox: { width: 300, height: 200 } },
                 (decodedText, decodedResult) => {
                     const vin = decodedText.toUpperCase();
-                    output.innerText = `Scanné : ${vin}`;
+                    vinDisplay.innerText = `Scanné : ${vin}`;
+
                     if (/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
+                        output.innerText = "✅ VIN valide détecté.";
                         window.opener?.postMessage({ type: 'VIN_SCANNED', vin }, "*");
                         html5QrCode.stop().then(() => window.close());
                     } else {
-                        output.innerText = `Non valide : ${vin}`;
+                        output.innerText = "⚠️ VIN invalide (doit avoir 17 caractères alphanumériques sans I, O, Q).";
                     }
                 },
                 error => {
-                    // On ne fait rien ici pour éviter de polluer avec les erreurs normales de scan
+                    // Silence sur les erreurs normales
                 }
             );
         }).catch(err => {
