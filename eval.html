@@ -635,9 +635,9 @@
                         <label for="vin">Numéro d'identification du véhicule (VIN) <i class="fas fa-question-circle" title="Le VIN se trouve généralement sur le tableau de bord (côté conducteur) ou sur l'étiquette de la porte."></i></label>
                         <div style="display: flex; gap: 10px; margin-top: 10px;">
                             <input type="text" id="vin" class="form-control" placeholder="Entrez le VIN de 17 caractères" maxlength="17" pattern="[A-HJ-NPR-Z0-9]{17}" title="Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)" required style="flex: 1;">
-                            <button type="button" id="scanVinBtn" class="btn" title="Scanner avec la caméra" onclick="window.location.href='scanner.html';">
-    <i class="fas fa-camera"></i>
-</button>
+                            <button type="button" id="scanVinBtn" class="btn" title="Scanner avec la caméra">
+                                <i class="fas fa-camera"></i>
+                            </button>
                         </div>
                         <button type="button" id="decodeVinBtn" class="btn" style="margin-top: 10px;">Décoder le VIN</button>
                     </div>
@@ -904,19 +904,16 @@
     </footer>
 
     <script>
-// Récupération du VIN scanné depuis localStorage
-document.addEventListener('DOMContentLoaded', function() {
-    const vinScanned = localStorage.getItem('scannedVin');
-    if (vinScanned) {
-        document.getElementById('vin').value = vinScanned;
-        localStorage.removeItem('scannedVin'); // Nettoyer après utilisation
-        
-        // Optionnel : déclencher le décodage automatique
-        setTimeout(() => {
-            document.getElementById('decodeVinBtn').click();
-        }, 500);
-    }
-});
+        document.addEventListener('DOMContentLoaded', () => {
+            const scannedVin = localStorage.getItem('scannedVin');
+            if (scannedVin) {
+                document.getElementById('vin').value = scannedVin;
+                localStorage.removeItem('scannedVin'); // Clean up localStorage
+                // Trigger the VIN decode if you want it to automatically populate other fields
+                document.getElementById('decodeVinBtn').click();
+            }
+        });
+
         // Photo Tab Logic
         const photoTabs = document.querySelectorAll('.photo-tab');
         const photoTabContents = document.querySelectorAll('.photo-tab-content');
@@ -933,12 +930,23 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        document.getElementById('scanVinBtn').addEventListener('click', () => {
-    // Stocker la page actuelle pour y revenir après le scan
-    localStorage.setItem('returnUrl', window.location.href);
-    // Rediriger vers la page de scan
-    window.location.href = 'scanner.html';
-});
+        // VIN Decoder Logic
+        document.getElementById('decodeVinBtn').addEventListener('click', async function() {
+            const vinInput = document.getElementById('vin');
+            const vin = vinInput.value.trim().toUpperCase();
+
+            const vinResultsDiv = document.getElementById('vin-decoder-results');
+            const decodedMarque = document.getElementById('decodedMarque');
+            const decodedModele = document.getElementById('decodedModele');
+            const decodedAnnee = document.getElementById('decodedAnnee');
+            const decodedCarburant = document.getElementById('decodedCarburant');
+            const decodedTransmission = document.getElementById('decodedTransmission');
+
+            if (vin.length !== 17 || !/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
+                alert('Veuillez entrer un VIN valide de 17 caractères (sans les lettres I, O, Q).');
+                vinResultsDiv.style.display = 'none';
+                return;
+            }
 
             vinResultsDiv.style.display = 'block';
             decodedMarque.textContent = 'Décodage en cours...';
