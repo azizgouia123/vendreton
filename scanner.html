@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scan de VIN - Zone Ligne Unique</title>
+    <title>Scanner VIN vers Eval</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
         body {
@@ -38,114 +38,178 @@
         #result {
             margin-top: 20px;
             padding: 15px;
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
             background-color: white;
-            border-radius: 8px;
-            min-width: 300px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            font-weight: bold;
+            color: #E31937;
+            min-width: 250px;
+            text-align: center;
         }
         button {
-            margin: 10px;
-            padding: 12px 24px;
-            background-color: #0056B3;
+            padding: 10px 20px;
+            background-color: #0056B3; /* Bleu Québec */
             color: white;
             border: none;
             border-radius: 5px;
-            font-size: 18px;
+            font-size: 16px;
             cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s ease;
         }
-        #loading {
-            display: none;
+        button:hover {
+            background-color: #004085;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 15px;
             margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Scan de VIN - Ligne Unique</h1>
+    <h1>Scanner VIN (OCR)</h1>
+    <p>Positionnez le VIN dans le cadre pour la reconnaissance.</p>
+
     <div id="scanner-container">
         <video id="video" autoplay playsinline></video>
         <div id="scan-line"></div>
     </div>
-    <div id="result">Prêt à scanner...</div>
-    <button id="startBtn">Démarrer</button>
-    <button id="captureBtn">Lire le VIN</button>
-    <div id="loading">Analyse en cours...</div>
+
+    <div id="result">En attente du scan...</div>
+
+    <div class="action-buttons">
+        <button id="startScanBtn">Démarrer le scan</button>
+        <button id="stopScanBtn" disabled>Arrêter le scan</button>
+        <button id="sendBtn" disabled>Envoyer vers Eval</button>
+    </div>
 
     <script>
         const video = document.getElementById('video');
         const resultDiv = document.getElementById('result');
-        const loadingDiv = document.getElementById('loading');
-        let stream = null;
+        const startScanBtn = document.getElementById('startScanBtn');
+        const stopScanBtn = document.getElementById('stopScanBtn');
+        const sendBtn = document.getElementById('sendBtn'); // Référence au nouveau bouton
 
-        // Démarrer la caméra
-        document.getElementById('startBtn').addEventListener('click', async () => {
+        let worker;
+        let stream;
+        let scanningInterval;
+        let lastVin = '';
+        let returnUrl = 'eval.html'; // URL par défaut, peut être écrasée par localStorage
+
+        // Vérifier si une URL de retour est définie dans localStorage
+        if (localStorage.getItem('returnUrl')) {
+            returnUrl = localStorage.getItem('returnUrl');
+            localStorage.removeItem('returnUrl'); // Nettoyer après utilisation
+        }
+
+        // Initialiser Tesseract.js worker
+        async function initTesseract() {
+            if (worker) {
+                await worker.terminate();
+            }
+            worker = await Tesseract.createWorker('eng', 1, {
+                logger: m => console.log(m), // Optional: see progress in console
+            });
+            await worker.load();
+            await worker.loadLanguage('eng');
+            await worker.initialize('eng');
+            await worker.setParameters({
+                tessedit_char_whitelist: 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789',
+                preserve_interword_spaces: 0
+            });
+        }
+
+        // Démarrer la caméra et le scan
+        startScanBtn.addEventListener('click', async () => {
+            await initTesseract(); // Initialiser le worker à chaque démarrage du scan
             try {
-                stopCamera();
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    }
-                });
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
                 video.srcObject = stream;
-                resultDiv.textContent = "Caméra prête - Alignez le VIN avec la ligne rouge";
+                video.play();
+                startScanBtn.disabled = true;
+                stopScanBtn.disabled = false;
+                sendBtn.disabled = true; // Désactiver initialement
+                resultDiv.textContent = 'Scanning...';
+                resultDiv.style.color = '#0056B3';
+
+                scanningInterval = setInterval(scanFrame, 500); // Scan toutes les 500ms
             } catch (err) {
-                resultDiv.textContent = "Erreur: " + err.message;
+                console.error("Erreur d'accès à la caméra:", err);
+                resultDiv.textContent = 'Erreur: Accès caméra refusé ou non supporté.';
+                resultDiv.style.color = '#E31937';
+                startScanBtn.disabled = false;
+                stopScanBtn.disabled = true;
+                sendBtn.disabled = true;
             }
         });
 
-        // Capturer et analyser
-        document.getElementById('captureBtn').addEventListener('click', async () => {
-            if (!stream) {
-                resultDiv.textContent = "Veuillez d'abord démarrer la caméra";
-                return;
-            }
+        // Arrêter le scan
+        stopScanBtn.addEventListener('click', () => {
+            stopCamera();
+            clearInterval(scanningInterval);
+            resultDiv.textContent = 'Scan arrêté.';
+            resultDiv.style.color = '#6C757D';
+            startScanBtn.disabled = false;
+            stopScanBtn.disabled = true;
+            sendBtn.disabled = true; // Désactiver si arrêté manuellement
+        });
 
-            loadingDiv.style.display = "block";
-            resultDiv.textContent = "Analyse...";
+        async function scanFrame() {
+            if (!worker || !video.srcObject) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Définir la zone de reconnaissance (autour de la ligne de scan)
+            const scanLineY = canvas.height / 2;
+            const scanZoneHeight = canvas.height * 0.2; // 20% de la hauteur de la vidéo
+            const rect = {
+                left: 0,
+                top: scanLineY - (scanZoneHeight / 2),
+                width: canvas.width,
+                height: scanZoneHeight
+            };
 
             try {
-                // Créer un canvas temporaire
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = video.videoWidth;
-                canvas.height = 50; // Hauteur très réduite pour une seule ligne
+                const { data: { text } } = await worker.recognize(canvas, { rectangle: rect });
 
-                // Capturer uniquement la zone de la ligne rouge (centre de l'image)
-                const lineY = video.videoHeight / 2;
-                ctx.drawImage(video, 0, lineY - 25, video.videoWidth, 50, 0, 0, video.videoWidth, 50);
-
-                // Améliorer le contraste
-                ctx.filter = "contrast(200%) brightness(120%) grayscale(100%)";
-                ctx.drawImage(canvas, 0, 0);
-
-                // Utiliser Tesseract avec configuration spéciale VIN
-                const { data: { text } } = await Tesseract.recognize(
-                    canvas,
-                    'eng',
-                    { 
-                        tessedit_char_whitelist: 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789',
-                        preserve_interword_spaces: 0
-                    }
-                );
-
-                // Extraire le VIN
+                // Nettoyer et valider le VIN
                 const vin = text.replace(/[^A-HJ-NPR-Z0-9]/g, '').substring(0, 17);
                 
-                if (vin.length === 17) {
+                if (vin.length === 17 && vin !== lastVin) {
+                    lastVin = vin;
                     resultDiv.textContent = `VIN: ${vin}`;
                     resultDiv.style.color = "#1a7f37";
-                } else {
-                    resultDiv.textContent = "VIN non valide (17 caractères requis)";
-                    resultDiv.style.color = "#E31937";
+                    sendBtn.disabled = false; // Activer le bouton d'envoi
+                    
+                    // Optionnel: Arrêter le scan automatiquement après détection
+                    // stopCamera();
+                    // clearInterval(scanningInterval);
+                    // stopScanBtn.disabled = true; 
                 }
             } catch (err) {
-                resultDiv.textContent = "Erreur: " + err.message;
-            } finally {
-                loadingDiv.style.display = "none";
+                console.log("Scan error (could be no text detected):", err);
+                resultDiv.textContent = 'Scanning... (Aucun VIN détecté)';
+                resultDiv.style.color = '#0056B3';
+                sendBtn.disabled = true; // Désactiver si aucun VIN valide
+            }
+        }
+
+        // Envoyer vers eval.html
+        sendBtn.addEventListener('click', () => {
+            if (lastVin) {
+                // Stocker le VIN dans localStorage
+                localStorage.setItem('scannedVin', lastVin);
+                
+                // Rediriger vers l'URL de retour (eval.html par défaut)
+                window.location.href = returnUrl;
             }
         });
 
@@ -157,8 +221,11 @@
             }
         }
 
-        // Nettoyage
+        // Nettoyage lors de la fermeture de la fenêtre
         window.addEventListener('beforeunload', stopCamera);
+        
+        // Initialiser le worker au chargement de la page pour une meilleure réactivité
+        initTesseract(); 
     </script>
 </body>
 </html>
