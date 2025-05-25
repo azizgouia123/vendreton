@@ -587,12 +587,11 @@
                 padding-right: 5px;
             }
         }
-    </style>
+   </style>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://unpkg.com/@zxing/library@0.19.1"></script>
-</head>
+    </head>
 <body>
     <header class="eval-header">
         <div class="container">
@@ -1077,59 +1076,14 @@
             }
         });
 
-        // Scanner VIN
-        document.getElementById('scanVinBtn').addEventListener('click', async () => {
-            const codeReader = new ZXing.BrowserMultiFormatReader();
+        // MODIFICATION ICI POUR LE BOUTON SCANNER VIN
+        document.getElementById('scanVinBtn').addEventListener('click', () => {
+            // Stocke l'URL de retour dans localStorage pour que scanner.html sache où rediriger
+            // Assurez-vous que 'eval.html' est le chemin correct vers votre page d'évaluation.
+            localStorage.setItem('returnUrl', 'eval.html'); 
             
-            const modal = document.createElement('div');
-            modal.className = 'scanner-modal';
-            
-            const video = document.createElement('video');
-            video.className = 'scanner-video';
-            video.setAttribute('playsinline', '');
-            
-            const controls = document.createElement('div');
-            controls.className = 'scanner-controls';
-            
-            const closeBtn = document.createElement('button');
-            closeBtn.id = 'scannerCloseBtn';
-            closeBtn.className = 'btn';
-            closeBtn.innerHTML = '<i class="fas fa-times"></i> Fermer le scanner';
-            
-            modal.appendChild(video);
-            modal.appendChild(controls);
-            controls.appendChild(closeBtn);
-            document.body.appendChild(modal);
-
-            closeBtn.addEventListener('click', () => {
-                codeReader.reset();
-                modal.remove();
-            });
-
-            try {
-                const result = await codeReader.decodeFromVideoDevice(null, video, (result, err) => {
-                    if (result) {
-                        const scannedVin = result.text.toUpperCase();
-                        if (/^[A-HJ-NPR-Z0-9]{17}$/.test(scannedVin)) {
-                            document.getElementById('vin').value = scannedVin;
-                            codeReader.reset();
-                            modal.remove();
-                            document.getElementById('decodeVinBtn').click();
-                        } else {
-                            alert('Code scanné invalide. Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)');
-                        }
-                    }
-                    if (err && !(err instanceof ZXing.NotFoundException)) {
-                        console.error(err);
-                        alert(`Erreur de scan: ${err}`);
-                        modal.remove();
-                    }
-                });
-            } catch (error) {
-                console.error('Erreur:', error);
-                alert('Accès à la caméra refusé ou appareil non supporté');
-                modal.remove();
-            }
+            // Redirige la page actuelle vers scanner.html (votre page de scan Tesseract.js)
+            window.location.href = 'scanner.html';
         });
 
         // Store uploaded images as Data URLs with unique IDs for deletion
