@@ -3,27 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner VIN vers Eval</title>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <title>Scanner VIN</title>
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Montserrat', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
             background-color: #f5f5f5;
+            text-align: center;
         }
         #scanner-container {
-            position: relative;
             width: 100%;
-            max-width: 800px;
+            max-width: 500px;
+            position: relative;
             margin: 20px 0;
         }
         #video {
             width: 100%;
-            max-height: 300px;
-            background-color: #000;
+            border-radius: 8px;
+            border: 3px solid #E31937;
+            background: #000;
         }
         #scan-line {
             position: absolute;
@@ -31,143 +34,91 @@
             left: 0;
             width: 100%;
             height: 3px;
-            background-color: #E31937;
-            box-shadow: 0 0 10px rgba(227, 25, 55, 0.7);
-            z-index: 10;
+            background-color: #FFC72C;
+            box-shadow: 0 0 10px rgba(255, 199, 44, 0.7);
         }
         #result {
-            margin-top: 20px;
-            padding: 15px;
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
-            background-color: white;
-            border-radius: 8px;
-            min-width: 300px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 15px 0;
+            padding: 10px 15px;
+            background: white;
+            border-radius: 5px;
+            font-weight: 600;
+            min-width: 250px;
         }
         button {
-            margin: 10px;
-            padding: 12px 24px;
-            background-color: #0056B3;
+            padding: 10px 20px;
+            background-color: #E31937;
             color: white;
             border: none;
             border-radius: 5px;
-            font-size: 18px;
+            font-size: 16px;
             cursor: pointer;
-        }
-        #loading {
-            display: none;
-            margin-top: 20px;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>Scanner VIN vers Eval</h1>
+    <h1 style="color: #E31937;">Scanner de VIN</h1>
+    <p>Alignez le code VIN avec la ligne jaune</p>
+    
     <div id="scanner-container">
-        <video id="video" autoplay playsinline></video>
+        <video id="video"></video>
         <div id="scan-line"></div>
     </div>
+    
     <div id="result">Prêt à scanner...</div>
-    <button id="startBtn">Démarrer la Caméra</button>
-    <button id="sendBtn">VIN Confirmé</button>
+    <button id="cancelBtn">Annuler</button>
 
     <script>
-        const video = document.getElementById('video');
-        const resultDiv = document.getElementById('result');
-        let stream = null;
-        let lastVin = '';
+        const videoElement = document.getElementById('video');
+        const resultElement = document.getElementById('result');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const codeReader = new ZXing.BrowserMultiFormatReader();
 
-        // Démarrer la caméra
-        document.getElementById('startBtn').addEventListener('click', async () => {
-            try {
-                stopCamera();
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
+        // Démarrer le scanner
+        function startScanner() {
+            codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
+                if (result) {
+                    const vin = result.text.toUpperCase().replace(/\s/g, '');
+                    
+                    if (/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
+                        resultElement.textContent = `VIN valide: ${vin}`;
+                        resultElement.style.color = "#1a7f37";
+                        
+                        // Envoyer le VIN à la page parente
+                        if (window.opener) {
+                            window.opener.postMessage({ type: 'VIN_SCANNED', vin: vin }, '*');
+                            setTimeout(() => window.close(), 500);
+                        } else {
+                            localStorage.setItem('scannedVin', vin);
+                            window.location.href = localStorage.getItem('returnUrl') || 'eval.html';
+                        }
                     }
-                });
-                video.srcObject = stream;
-                resultDiv.textContent = "Alignez le VIN avec la ligne rouge";
-                startContinuousScan();
-            } catch (err) {
-                resultDiv.textContent = "Erreur: " + err.message;
-            }
-        });
-
-        // Scanner en continu
-        async function startContinuousScan() {
-            while (stream && !document.getElementById('sendBtn').disabled) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                await scanVin();
-            }
-        }
-
-        // Fonction de scan
-        async function scanVin() {
-            if (!stream) return;
-
-            try {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = video.videoWidth;
-                canvas.height = 50;
-
-                const lineY = video.videoHeight / 2;
-                ctx.drawImage(video, 0, lineY - 25, video.videoWidth, 50, 0, 0, video.videoWidth, 50);
-
-                // Amélioration du contraste
-                ctx.filter = "contrast(200%) brightness(120%) grayscale(100%)";
-                ctx.drawImage(canvas, 0, 0);
-
-                const { data: { text } } = await Tesseract.recognize(
-                    canvas,
-                    'eng',
-                    { 
-                        tessedit_char_whitelist: 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789',
-                        preserve_interword_spaces: 0
-                    }
-                );
-
-                const vin = text.replace(/[^A-HJ-NPR-Z0-9]/g, '').substring(0, 17);
-                
-                if (vin.length === 17 && vin !== lastVin) {
-                    lastVin = vin;
-                    resultDiv.textContent = `VIN: ${vin}`;
-                    resultDiv.style.color = "#1a7f37";
-                    document.getElementById('sendBtn').disabled = false;
                 }
-            } catch (err) {
-                console.log("Scan error:", err);
-            }
+                
+                if (err && !(err instanceof ZXing.NotFoundException)) {
+                    console.error(err);
+                    resultElement.textContent = "Erreur: " + err.message;
+                    resultElement.style.color = "#E31937";
+                }
+            }).catch(err => {
+                resultElement.textContent = "Erreur caméra: " + err.message;
+                resultElement.style.color = "#E31937";
+            });
         }
 
-        // Envoyer vers eval.html
-        document.getElementById('sendBtn').addEventListener('click', () => {
-            if (lastVin) {
-                // Stocker le VIN dans localStorage
-                localStorage.setItem('scannedVin', lastVin);
-                
-                // Rediriger vers eval.html
-                window.location.href = 'eval.html';
-                
-                // Alternative: Ouvrir dans un nouvel onglet
-                // window.open('eval.html', '_blank');
+        // Annuler le scan
+        cancelBtn.addEventListener('click', () => {
+            codeReader.reset();
+            if (window.opener) {
+                window.close();
+            } else {
+                window.location.href = localStorage.getItem('returnUrl') || 'eval.html';
             }
         });
 
-        function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-                video.srcObject = null;
-            }
-        }
-
-        // Nettoyage
-        window.addEventListener('beforeunload', stopCamera);
+        // Démarrer au chargement
+        startScanner();
     </script>
 </body>
 </html>
