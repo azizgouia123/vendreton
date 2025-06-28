@@ -61,23 +61,6 @@
             font-size: 18px;
         }
         
-        .scan-area::before {
-            content: "";
-            position: absolute;
-            top: -15px;
-            left: -15px;
-            right: -15px;
-            bottom: -15px;
-            border: 2px dashed white;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
-        
         .btn {
             background-color: #3498db;
             color: white;
@@ -94,8 +77,12 @@
             background-color: #95a5a6;
         }
         
-        .btn-secondary:hover {
-            background-color: #7f8c8d;
+        .btn-success {
+            background-color: #2ecc71;
+        }
+        
+        .btn-danger {
+            background-color: #e74c3c;
         }
         
         #result {
@@ -106,56 +93,26 @@
             display: none;
         }
         
-        .vin-info {
-            margin-top: 20px;
+        .vin-display {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 15px 0;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            text-align: center;
+            letter-spacing: 2px;
         }
         
-        .vin-info table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .vin-info th, .vin-info td {
-            padding: 8px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .vin-info th {
-            background-color: #f2f2f2;
+        .validation-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
         }
         
         .error {
             color: #e74c3c;
             margin-top: 10px;
-        }
-        
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 10px 0;
-        }
-        
-        .loading-spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .guide-text {
-            text-align: center;
-            margin-top: 10px;
-            color: #7f8c8d;
-            font-style: italic;
         }
     </style>
 </head>
@@ -167,230 +124,131 @@
             <video muted playsinline></video>
             <div class="scan-area">Alignez le code VIN ici</div>
         </div>
-        <p class="guide-text">Maintenez le téléphone à 15-20 cm du code et gardez stable</p>
-        
-        <div class="loading">
-            <div class="loading-spinner"></div>
-            <p>Analyse en cours...</p>
-        </div>
+        <p style="text-align: center;">Maintenez le téléphone à 15-20 cm du code</p>
         
         <button id="startBtn" class="btn">Démarrer le scanner</button>
         <button id="stopBtn" class="btn btn-secondary" disabled>Arrêter le scanner</button>
         <button id="manualBtn" class="btn">Entrer manuellement</button>
         
         <div id="result">
-            <h3>Résultat du scan :</h3>
-            <div id="vinResult"></div>
-            <div class="vin-info" id="vinInfo"></div>
+            <h3>VIN détecté :</h3>
+            <div id="vinDisplay" class="vin-display"></div>
+            
+            <p>Confirmez que ce VIN est correct :</p>
+            <div class="validation-buttons">
+                <button id="confirmBtn" class="btn btn-success">Valider</button>
+                <button id="rescanBtn" class="btn btn-danger">Rescanner</button>
+            </div>
         </div>
         
         <div id="error" class="error"></div>
-        <div id="cameraError" class="error"></div>
     </div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const startBtn = document.getElementById('startBtn');
             const stopBtn = document.getElementById('stopBtn');
             const manualBtn = document.getElementById('manualBtn');
-            const videoElement = document.querySelector('#scanner video');
-            const scanArea = document.querySelector('.scan-area');
+            const confirmBtn = document.getElementById('confirmBtn');
+            const rescanBtn = document.getElementById('rescanBtn');
+            const vinDisplay = document.getElementById('vinDisplay');
             const resultDiv = document.getElementById('result');
-            const vinResult = document.getElementById('vinResult');
-            const vinInfo = document.getElementById('vinInfo');
             const errorDiv = document.getElementById('error');
-            const cameraErrorDiv = document.getElementById('cameraError');
-            const loadingDiv = document.querySelector('.loading');
+            const videoElement = document.querySelector('#scanner video');
             
-            let scannerActive = false;
-            let guideInterval;
-
-            const config = {
-                inputStream: {
-                    name: "Live",
-                    type: "LiveStream",
-                    target: videoElement,
-                    constraints: {
-                        facingMode: "environment",
-                        width: { min: 640, ideal: 1280, max: 1920 },
-                        height: { min: 480, ideal: 720, max: 1080 }
-                    },
-                },
-                decoder: {
-                    readers: ["code_39_vin_reader"],
-                },
-                locate: true,
-                frequency: 10,
-                area: {
-                    top: "30%",
-                    right: "10%",
-                    left: "10%",
-                    bottom: "60%"
-                }
-            };
-
-            startBtn.addEventListener('click', async function() {
-                try {
-                    await checkCamera();
-                    startScanner();
-                } catch (err) {
-                    cameraErrorDiv.textContent = err;
-                    console.error("Erreur caméra:", err);
-                }
+            let currentVin = '';
+            
+            // Démarrer le scanner
+            startBtn.addEventListener('click', function() {
+                startScanner();
             });
-
+            
+            // Arrêter le scanner
             stopBtn.addEventListener('click', function() {
                 stopScanner();
             });
-
+            
+            // Entrer manuellement
             manualBtn.addEventListener('click', function() {
-                const vin = prompt("Veuillez entrer le numéro VIN (17 caractères) :");
+                const vin = prompt("Entrez le VIN (17 caractères):");
                 if (vin && vin.length === 17) {
-                    processVIN(vin.toUpperCase());
+                    showResult(vin.toUpperCase());
                 } else if (vin) {
-                    errorDiv.textContent = "Le VIN doit contenir exactement 17 caractères.";
+                    errorDiv.textContent = "Le VIN doit faire 17 caractères";
                 }
             });
-
-            function checkCamera() {
-                return new Promise((resolve, reject) => {
-                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                        reject("Votre navigateur ne supporte pas l'accès à la caméra");
-                        return;
-                    }
-                    
-                    navigator.mediaDevices.getUserMedia({ video: true })
-                        .then(stream => {
-                            stream.getTracks().forEach(track => track.stop());
-                            resolve(true);
-                        })
-                        .catch(err => {
-                            reject("Accès à la caméra refusé : " + err.message);
-                        });
-                });
-            }
-
-            function startScanner() {
-                scannerActive = true;
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
+            
+            // Valider le VIN
+            confirmBtn.addEventListener('click', function() {
+                alert("VIN validé : " + currentVin);
+                // Ici vous pouvez ajouter la logique pour traiter le VIN validé
+            });
+            
+            // Rescanner
+            rescanBtn.addEventListener('click', function() {
                 resultDiv.style.display = 'none';
-                errorDiv.textContent = '';
-                cameraErrorDiv.textContent = '';
-                
-                Quagga.init(config, function(err) {
+                startScanner();
+            });
+            
+            function startScanner() {
+                Quagga.init({
+                    inputStream: {
+                        name: "Live",
+                        type: "LiveStream",
+                        target: videoElement,
+                        constraints: {
+                            facingMode: "environment",
+                            width: { min: 640 },
+                            height: { min: 480 }
+                        },
+                    },
+                    decoder: {
+                        readers: ["code_39_vin_reader"],
+                    },
+                    locate: true
+                }, function(err) {
                     if (err) {
-                        errorDiv.textContent = "Erreur d'initialisation : " + err;
-                        console.error("Quagga error:", err);
-                        stopScanner();
+                        errorDiv.textContent = "Erreur: " + err;
+                        console.error(err);
                         return;
                     }
                     
-                    navigator.mediaDevices.getUserMedia({
-                        video: {
-                            facingMode: "environment",
-                            width: { min: 640, ideal: 1280, max: 1920 },
-                            height: { min: 480, ideal: 720, max: 1080 }
-                        }
-                    }).then(stream => {
-                        videoElement.srcObject = stream;
-                        videoElement.play();
-                        Quagga.start();
-                        
-                        // Animation guide
-                        guideInterval = setInterval(() => {
-                            scanArea.style.transform = scanArea.style.transform === 'translateY(-5px)' 
-                                ? 'translateY(5px)' 
-                                : 'translateY(-5px)';
-                        }, 800);
-                    }).catch(err => {
-                        cameraErrorDiv.textContent = "Erreur caméra : " + err.message;
-                        stopScanner();
-                    });
+                    Quagga.start();
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    resultDiv.style.display = 'none';
+                    errorDiv.textContent = '';
                 });
-
+                
                 Quagga.onDetected(function(result) {
-                    if (!scannerActive) return;
-                    
                     const code = result.codeResult.code;
-                    if (isValidVIN(code)) {
+                    if (/^[A-HJ-NPR-Z0-9]{17}$/.test(code)) {
+                        currentVin = code;
                         stopScanner();
-                        processVIN(code);
-                    } else {
-                        errorDiv.textContent = "Code VIN non valide. Essayez à nouveau.";
+                        showResult(code);
                     }
                 });
             }
-
+            
             function stopScanner() {
-                scannerActive = false;
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
-                clearInterval(guideInterval);
-                scanArea.style.transform = '';
-                
-                if (videoElement.srcObject) {
-                    videoElement.srcObject.getTracks().forEach(track => track.stop());
-                    videoElement.srcObject = null;
-                }
-                
                 if (Quagga) {
                     Quagga.stop();
                 }
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
             }
-
-            function isValidVIN(vin) {
-                return vin && vin.replace(/[^a-zA-Z0-9]/g, '').length === 17;
+            
+            function showResult(vin) {
+                vinDisplay.textContent = vin;
+                resultDiv.style.display = 'block';
+                currentVin = vin;
             }
-
-            function processVIN(vin) {
-                loadingDiv.style.display = 'block';
-                resultDiv.style.display = 'none';
-                errorDiv.textContent = '';
-                
-                const cleanVIN = vin.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-                
-                setTimeout(() => {
-                    loadingDiv.style.display = 'none';
-                    
-                    if (cleanVIN.length === 17) {
-                        vinResult.innerHTML = `<strong>VIN détecté :</strong> ${cleanVIN}`;
-                        displayVehicleInfo(cleanVIN);
-                        resultDiv.style.display = 'block';
-                    } else {
-                        errorDiv.textContent = "Format VIN invalide (17 caractères requis)";
-                    }
-                }, 1000);
-            }
-
-            function displayVehicleInfo(vin) {
-                // Exemple de données - à remplacer par un appel API réel
-                const vehicleData = {
-                    marque: "Toyota",
-                    modèle: "Corolla",
-                    année: "2020",
-                    moteur: "2.0L 4-cylindres",
-                    transmission: "Automatique"
-                };
-                
-                vinInfo.innerHTML = `
-                    <h3>Informations du véhicule</h3>
-                    <table>
-                        ${Object.entries(vehicleData).map(([key, value]) => `
-                            <tr>
-                                <th>${key.charAt(0).toUpperCase() + key.slice(1)}</th>
-                                <td>${value}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                    <p style="margin-top:15px;color:#3498db;">
-                        <strong>NOTE :</strong> Ces données sont un exemple. Intégrez une API VIN réelle pour obtenir les vraies informations.
-                    </p>
-                `;
-            }
-
-            window.addEventListener('beforeunload', stopScanner);
+            
+            // Nettoyage à la fermeture
+            window.addEventListener('beforeunload', function() {
+                stopScanner();
+            });
         });
     </script>
 </body>
