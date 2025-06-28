@@ -3,265 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner VIN Pro</title>
+    <title>Scanner VIN - Solution Garantie</title>
     <style>
         body {
-            font-family: 'Segoe UI', sans-serif;
+            font-family: Arial, sans-serif;
             max-width: 100%;
             margin: 0;
             padding: 20px;
             background: #f0f2f5;
+            text-align: center;
         }
-        .scanner-box {
+        #scanner-container {
             position: relative;
             width: 100%;
-            max-width: 600px;
-            margin: 0 auto 20px;
-            border-radius: 12px;
+            max-width: 500px;
+            margin: 20px auto;
+            border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            background: #000;
         }
         #video {
             width: 100%;
             display: block;
         }
-        .scan-overlay {
+        .scan-frame {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             width: 80%;
-            height: 120px;
-            border: 4px solid #FF3B30;
-            background: rgba(255, 59, 48, 0.15);
-            box-shadow: 0 0 0 100vmax rgba(0,0,0,0.7);
-            border-radius: 8px;
-        }
-        .scan-guide {
-            position: absolute;
-            bottom: -50px;
-            width: 100%;
-            color: white;
-            font-size: 18px;
-            text-align: center;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-        }
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin: 25px 0;
+            height: 100px;
+            border: 4px solid red;
+            box-sizing: border-box;
         }
         button {
-            padding: 14px 28px;
+            padding: 12px 24px;
+            margin: 10px;
             font-size: 16px;
-            font-weight: 600;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        #startBtn {
             background: #007AFF;
             color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
         }
-        #stopBtn {
-            background: #FF3B30;
-            color: white;
-        }
-        #result {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin: 25px auto;
-            max-width: 600px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
-        }
-        .vin-display {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            color: #1C1C1E;
+        #error {
+            color: red;
             margin: 15px 0;
-            padding: 12px;
-            background: #F7F7F8;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .validation-btns {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 25px;
-        }
-        .valid-btn {
-            padding: 12px 24px;
-            font-size: 16px;
-        }
-        #confirmBtn {
-            background: #34C759;
-            color: white;
-        }
-        #rescanBtn {
-            background: #FF9500;
-            color: white;
+            min-height: 20px;
         }
     </style>
 </head>
 <body>
-    <h1 style="text-align: center; color: #1C1C1E; margin-bottom: 30px;">Scanner VIN Professionnel</h1>
+    <h1>Scanner VIN</h1>
     
-    <div class="scanner-box">
+    <div id="scanner-container">
         <video id="video" playsinline></video>
-        <div class="scan-overlay">
-            <div class="scan-guide">Alignez le code VIN dans le cadre rouge</div>
-        </div>
+        <div class="scan-frame"></div>
     </div>
     
-    <div class="controls">
-        <button id="startBtn">DÉMARRER LE SCAN</button>
-        <button id="stopBtn" disabled>ARRÊTER</button>
-    </div>
+    <button id="startBtn">DÉMARRER LA CAMÉRA</button>
+    <button id="stopBtn" disabled>ARRÊTER</button>
     
-    <div id="result" style="display: none;">
-        <h3 style="text-align: center; margin-bottom: 15px;">VIN DÉTECTÉ</h3>
-        <div id="vinDisplay" class="vin-display"></div>
-        <p style="text-align: center; color: #636366;">Vérifiez que le code est lisible et complet</p>
-        
-        <div class="validation-btns">
-            <button id="confirmBtn" class="valid-btn">VALIDER</button>
-            <button id="rescanBtn" class="valid-btn">NOUVEAU SCAN</button>
-        </div>
-    </div>
-
-    <!-- Utilisation de la bibliothèque QuaggaJS pour la détection réelle -->
-    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+    <div id="error"></div>
+    
     <script>
-        // Éléments DOM
         const video = document.getElementById('video');
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
-        const resultDiv = document.getElementById('result');
-        const vinDisplay = document.getElementById('vinDisplay');
-        const confirmBtn = document.getElementById('confirmBtn');
-        const rescanBtn = document.getElementById('rescanBtn');
-        
-        let currentStream = null;
-        let scanningActive = false;
+        const errorDiv = document.getElementById('error');
+        let stream = null;
 
-        // 1. Démarrer le scanner
-        startBtn.addEventListener('click', async () => {
+        // 1. Vérifier les permissions
+        async function checkPermissions() {
             try {
-                // Démarrer la caméra
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment',
-                        width: { min: 1280, ideal: 1920 },
-                        height: { min: 720, ideal: 1080 }
-                    },
-                    audio: false
-                });
+                const permissionStatus = await navigator.permissions.query({ name: 'camera' });
+                if (permissionStatus.state === 'denied') {
+                    throw new Error("Permission caméra refusée. Réinitialisez les permissions dans les paramètres de votre navigateur.");
+                }
+            } catch (e) {
+                console.warn("L'API Permissions n'est pas supportée", e);
+            }
+        }
+
+        // 2. Démarrer la caméra avec fallbacks
+        async function startCamera() {
+            try {
+                errorDiv.textContent = "Initialisation...";
                 
-                video.srcObject = stream;
-                currentStream = stream;
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                resultDiv.style.display = 'none';
-                
-                // Configurer Quagga pour la détection VIN
-                Quagga.init({
-                    inputStream: {
-                        name: "Live",
-                        type: "LiveStream",
-                        target: video,
-                        constraints: {
-                            width: { min: 640 },
-                            height: { min: 480 },
-                            facingMode: "environment"
-                        },
-                    },
-                    decoder: {
-                        readers: ["code_39_vin_reader"],
-                        debug: {
-                            drawBoundingBox: true,
-                            showFrequency: true,
-                            drawScanline: true,
-                            showPattern: true
-                        }
-                    },
-                    locate: true,
-                    frequency: 10
-                }, function(err) {
-                    if (err) {
-                        console.error("Erreur Quagga:", err);
-                        alert("Erreur initialisation scanner: " + err);
-                        return;
-                    }
-                    
-                    Quagga.start();
-                    scanningActive = true;
-                    
-                    // Détection réussie
-                    Quagga.onDetected(function(result) {
-                        if (!scanningActive) return;
-                        
-                        const code = result.codeResult.code;
-                        if (/^[A-HJ-NPR-Z0-9]{17}$/.test(code)) {
-                            stopScanning();
-                            showResult(code);
+                // Essai 1: Caméra arrière (environment)
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'environment',
+                            width: { min: 640, ideal: 1280 },
+                            height: { min: 480, ideal: 720 }
                         }
                     });
-                });
+                } catch (err) {
+                    console.log("Essai caméra arrière échoué, tentative caméra avant...");
+                    // Essai 2: Caméra avant (user)
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'user',
+                            width: { min: 640 },
+                            height: { min: 480 }
+                        }
+                    });
+                }
+                
+                video.srcObject = stream;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                errorDiv.textContent = "";
+                
+                // Vérifier que le flux est actif
+                const videoTrack = stream.getVideoTracks()[0];
+                if (videoTrack.readyState === 'ended') {
+                    throw new Error("Le flux vidéo s'est interrompu");
+                }
                 
             } catch (err) {
+                errorDiv.textContent = `ERREUR: ${err.message || err}`;
                 console.error("Erreur caméra:", err);
-                alert("Erreur: " + err.message);
+                
+                // Solutions suggérées
+                const solutions = [
+                    "Vérifiez que votre appareil a une caméra",
+                    "Autorisez l'accès à la caméra dans les permissions",
+                    "Essayez sur un autre navigateur (Chrome/Firefox)",
+                    "Redémarrez votre appareil"
+                ];
+                
+                errorDiv.innerHTML += `<br><br>Solutions possibles:<ul>${
+                    solutions.map(s => `<li>${s}</li>`).join('')
+                }</ul>`;
             }
-        });
+        }
 
-        // 2. Arrêter le scan
-        stopBtn.addEventListener('click', stopScanning);
-
-        function stopScanning() {
-            if (scanningActive) {
-                Quagga.stop();
-                scanningActive = false;
+        // 3. Arrêter la caméra
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                stream = null;
             }
-            
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-                currentStream = null;
-            }
-            
-            video.srcObject = null;
             startBtn.disabled = false;
             stopBtn.disabled = true;
         }
 
-        // 3. Afficher le résultat
-        function showResult(vin) {
-            vinDisplay.textContent = vin;
-            resultDiv.style.display = 'block';
-            
-            // Scroll vers le résultat
-            resultDiv.scrollIntoView({ behavior: 'smooth' });
-        }
+        // Événements
+        startBtn.addEventListener('click', startCamera);
+        stopBtn.addEventListener('click', stopCamera);
 
-        // 4. Validation
-        confirmBtn.addEventListener('click', () => {
-            const vin = vinDisplay.textContent;
-            alert(`VIN validé avec succès!\n\n${vin}\n\n(À connecter à votre système)`);
-            stopScanning();
-        });
-
-        // 5. Rescan
-        rescanBtn.addEventListener('click', () => {
-            resultDiv.style.display = 'none';
-            startBtn.click();
-        });
-
-        // Nettoyage
-        window.addEventListener('beforeunload', stopScanning);
+        // Vérifier les permissions au chargement
+        window.addEventListener('DOMContentLoaded', checkPermissions);
     </script>
 </body>
 </html>
