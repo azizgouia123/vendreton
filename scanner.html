@@ -3,171 +3,366 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner VIN vers Eval</title>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <title>Scanner VIN - VendreTonAuto</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
         }
-        #scanner-container {
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        
+        .scanner-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        #scanner {
+            width: 100%;
+            height: 300px;
+            border: 2px dashed #ccc;
+            margin-bottom: 15px;
             position: relative;
-            width: 100%;
-            max-width: 800px;
-            margin: 20px 0;
+            overflow: hidden;
         }
-        #video {
+        
+        #scanner video {
             width: 100%;
-            max-height: 300px;
-            background-color: #000;
+            height: 100%;
+            object-fit: cover;
         }
-        #scan-line {
+        
+        #scanner canvas {
+            display: none;
+        }
+        
+        .scanner-overlay {
             position: absolute;
-            top: 50%;
+            top: 0;
             left: 0;
             width: 100%;
-            height: 3px;
-            background-color: #E31937;
-            box-shadow: 0 0 10px rgba(227, 25, 55, 0.7);
-            z-index: 10;
+            height: 100%;
+            border: 2px solid rgba(0, 255, 0, 0.5);
+            box-sizing: border-box;
         }
+        
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-secondary {
+            background-color: #95a5a6;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+        
         #result {
             margin-top: 20px;
             padding: 15px;
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
-            background-color: white;
-            border-radius: 8px;
-            min-width: 300px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        button {
-            margin: 10px;
-            padding: 12px 24px;
-            background-color: #0056B3;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            cursor: pointer;
-        }
-        #loading {
+            background-color: #e8f4f8;
+            border-radius: 4px;
             display: none;
+        }
+        
+        .vin-info {
             margin-top: 20px;
+        }
+        
+        .vin-info table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .vin-info th, .vin-info td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .vin-info th {
+            background-color: #f2f2f2;
+        }
+        
+        .error {
+            color: #e74c3c;
+            margin-top: 10px;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <h1>Scanner VIN vers Eval</h1>
-    <div id="scanner-container">
-        <video id="video" autoplay playsinline></video>
-        <div id="scan-line"></div>
+    <h1>Scanner de VIN</h1>
+    
+    <div class="scanner-container">
+        <div id="scanner">
+            <video muted playsinline></video>
+            <canvas></canvas>
+            <div class="scanner-overlay"></div>
+        </div>
+        
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p>Analyse en cours...</p>
+        </div>
+        
+        <button id="startBtn" class="btn">Démarrer le scanner</button>
+        <button id="stopBtn" class="btn btn-secondary" disabled>Arrêter le scanner</button>
+        <button id="manualBtn" class="btn">Entrer manuellement</button>
+        
+        <div id="result">
+            <h3>Résultat du scan :</h3>
+            <div id="vinResult"></div>
+            
+            <div class="vin-info" id="vinInfo">
+                <!-- Les informations du VIN seront affichées ici -->
+            </div>
+        </div>
+        
+        <div id="error" class="error"></div>
     </div>
-    <div id="result">Prêt à scanner...</div>
-    <button id="startBtn">Démarrer la Caméra</button>
-    <button id="sendBtn">Envoyer vers Eval</button>
-
+    
+    <script src="https://cdn.jsdelivr.net/npm/quagga/dist/quagga.min.js"></script>
     <script>
-        const video = document.getElementById('video');
-        const resultDiv = document.getElementById('result');
-        let stream = null;
-        let lastVin = '';
-
-        // Démarrer la caméra
-        document.getElementById('startBtn').addEventListener('click', async () => {
-            try {
-                stopCamera();
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
+        document.addEventListener('DOMContentLoaded', function() {
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const manualBtn = document.getElementById('manualBtn');
+            const resultDiv = document.getElementById('result');
+            const vinResult = document.getElementById('vinResult');
+            const vinInfo = document.getElementById('vinInfo');
+            const errorDiv = document.getElementById('error');
+            const loadingDiv = document.querySelector('.loading');
+            
+            let scannerActive = false;
+            
+            // Démarrer le scanner
+            startBtn.addEventListener('click', function() {
+                startScanner();
+            });
+            
+            // Arrêter le scanner
+            stopBtn.addEventListener('click', function() {
+                stopScanner();
+            });
+            
+            // Entrer manuellement
+            manualBtn.addEventListener('click', function() {
+                const vin = prompt("Veuillez entrer le numéro VIN (17 caractères) :");
+                if (vin && vin.length === 17) {
+                    processVIN(vin.toUpperCase());
+                } else if (vin) {
+                    errorDiv.textContent = "Le VIN doit contenir exactement 17 caractères.";
+                }
+            });
+            
+            function startScanner() {
+                scannerActive = true;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                resultDiv.style.display = 'none';
+                errorDiv.textContent = '';
+                
+                Quagga.init({
+                    inputStream: {
+                        name: "Live",
+                        type: "LiveStream",
+                        target: document.querySelector('#scanner video'),
+                        constraints: {
+                            width: 480,
+                            height: 320,
+                            facingMode: "environment"
+                        },
+                    },
+                    decoder: {
+                        readers: [
+                            "code_128_reader",
+                            "ean_reader",
+                            "ean_8_reader",
+                            "code_39_reader",
+                            "code_39_vin_reader",
+                            "codabar_reader",
+                            "upc_reader",
+                            "upc_e_reader",
+                            "i2of5_reader"
+                        ],
+                        debug: {
+                            showCanvas: true,
+                            showPatches: true,
+                            showFoundPatches: true,
+                            showSkeleton: true,
+                            showLabels: true,
+                            showPatchLabels: true,
+                            showRemainingPatchLabels: true,
+                            boxFromPatches: {
+                                showTransformed: true,
+                                showTransformedBox: true,
+                                showBB: true
+                            }
+                        }
+                    },
+                    locate: true
+                }, function(err) {
+                    if (err) {
+                        errorDiv.textContent = "Erreur lors de l'initialisation du scanner: " + err;
+                        stopScanner();
+                        return;
+                    }
+                    Quagga.start();
+                });
+                
+                Quagga.onDetected(function(result) {
+                    if (!scannerActive) return;
+                    
+                    const code = result.codeResult.code;
+                    if (isValidVIN(code)) {
+                        stopScanner();
+                        processVIN(code);
+                    } else {
+                        errorDiv.textContent = "Code VIN non valide détecté. Essayez à nouveau.";
                     }
                 });
-                video.srcObject = stream;
-                resultDiv.textContent = "Alignez le VIN avec la ligne rouge";
-                startContinuousScan();
-            } catch (err) {
-                resultDiv.textContent = "Erreur: " + err.message;
             }
-        });
-
-        // Scanner en continu
-        async function startContinuousScan() {
-            while (stream && !document.getElementById('sendBtn').disabled) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                await scanVin();
-            }
-        }
-
-        // Fonction de scan
-        async function scanVin() {
-            if (!stream) return;
-
-            try {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = video.videoWidth;
-                canvas.height = 50;
-
-                const lineY = video.videoHeight / 2;
-                ctx.drawImage(video, 0, lineY - 25, video.videoWidth, 50, 0, 0, video.videoWidth, 50);
-
-                // Amélioration du contraste
-                ctx.filter = "contrast(200%) brightness(120%) grayscale(100%)";
-                ctx.drawImage(canvas, 0, 0);
-
-                const { data: { text } } = await Tesseract.recognize(
-                    canvas,
-                    'eng',
-                    { 
-                        tessedit_char_whitelist: 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789',
-                        preserve_interword_spaces: 0
-                    }
-                );
-
-                const vin = text.replace(/[^A-HJ-NPR-Z0-9]/g, '').substring(0, 17);
+            
+            function stopScanner() {
+                scannerActive = false;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
                 
-                if (vin.length === 17 && vin !== lastVin) {
-                    lastVin = vin;
-                    resultDiv.textContent = `VIN: ${vin}`;
-                    resultDiv.style.color = "#1a7f37";
-                    document.getElementById('sendBtn').disabled = false;
+                if (Quagga) {
+                    Quagga.stop();
                 }
-            } catch (err) {
-                console.log("Scan error:", err);
             }
-        }
-
-        // Envoyer vers eval.html
-        document.getElementById('sendBtn').addEventListener('click', () => {
-            if (lastVin) {
-                // Stocker le VIN dans localStorage
-                localStorage.setItem('scannedVin', lastVin);
+            
+            function isValidVIN(vin) {
+                if (!vin || typeof vin !== 'string') return false;
                 
-                // Rediriger vers eval.html
-                window.location.href = 'eval.html';
-                
-                // Alternative: Ouvrir dans un nouvel onglet
-                // window.open('eval.html', '_blank');
+                // VIN standard a 17 caractères
+                const normalizedVIN = vin.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                return normalizedVIN.length === 17;
             }
+            
+            function processVIN(vin) {
+                loadingDiv.style.display = 'block';
+                resultDiv.style.display = 'none';
+                errorDiv.textContent = '';
+                
+                // Nettoyer le VIN
+                const cleanVIN = vin.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                
+                // Simuler une requête API (remplacer par une vraie requête)
+                setTimeout(() => {
+                    loadingDiv.style.display = 'none';
+                    
+                    if (cleanVIN.length === 17) {
+                        vinResult.innerHTML = `<strong>VIN trouvé :</strong> ${cleanVIN}`;
+                        displayVehicleInfo(cleanVIN);
+                        resultDiv.style.display = 'block';
+                    } else {
+                        errorDiv.textContent = "Le VIN doit contenir exactement 17 caractères.";
+                    }
+                }, 1500);
+            }
+            
+            function displayVehicleInfo(vin) {
+                // Ici, vous devriez faire un appel à une API VIN pour obtenir les informations réelles
+                // Ceci est un exemple statique pour la démonstration
+                
+                const vehicleData = {
+                    marque: "Toyota",
+                    modèle: "Corolla",
+                    année: "2020",
+                    moteur: "2.0L 4-cylindres",
+                    transmission: "Automatique",
+                    pays: "Japon",
+                    usine: "Takaoka, Toyota City"
+                };
+                
+                let html = `
+                    <h3>Informations du véhicule</h3>
+                    <table>
+                        <tr>
+                            <th>Marque</th>
+                            <td>${vehicleData.marque}</td>
+                        </tr>
+                        <tr>
+                            <th>Modèle</th>
+                            <td>${vehicleData.modèle}</td>
+                        </tr>
+                        <tr>
+                            <th>Année</th>
+                            <td>${vehicleData.année}</td>
+                        </tr>
+                        <tr>
+                            <th>Moteur</th>
+                            <td>${vehicleData.moteur}</td>
+                        </tr>
+                        <tr>
+                            <th>Transmission</th>
+                            <td>${vehicleData.transmission}</td>
+                        </tr>
+                        <tr>
+                            <th>Pays d'origine</th>
+                            <td>${vehicleData.pays}</td>
+                        </tr>
+                        <tr>
+                            <th>Usine d'assemblage</th>
+                            <td>${vehicleData.usine}</td>
+                        </tr>
+                    </table>
+                `;
+                
+                vinInfo.innerHTML = html;
+            }
+            
+            // Arrêter le scanner lorsque la page est quittée
+            window.addEventListener('beforeunload', function() {
+                if (scannerActive) {
+                    stopScanner();
+                }
+            });
         });
-
-        function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-                video.srcObject = null;
-            }
-        }
-
-        // Nettoyage
-        window.addEventListener('beforeunload', stopCamera);
     </script>
 </body>
 </html>
