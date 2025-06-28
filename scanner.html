@@ -3,103 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner VIN</title>
+    <title>Scanner VIN Simplifié</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        #scanner {
-            width: 100%;
-            height: 300px;
-            border: 2px solid #ccc;
-            margin: 20px 0;
-            position: relative;
-        }
-        #video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        #overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%;
-            height: 60px;
-            border: 4px solid red;
-            background-color: rgba(255,0,0,0.1);
-        }
-        button {
-            padding: 10px 15px;
-            font-size: 16px;
-            margin-right: 10px;
-        }
-        #result {
-            margin-top: 20px;
-            font-size: 18px;
-            font-weight: bold;
-        }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #video { width: 100%; max-width: 500px; border: 3px solid #333; }
+        button { padding: 12px 24px; font-size: 18px; margin: 10px; }
+        #result { font-size: 20px; margin: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
     <h1>Scanner VIN</h1>
-    
-    <div id="scanner">
-        <video id="video" muted playsinline></video>
-        <div id="overlay"></div>
+    <video id="video" playsinline></video>
+    <div>
+        <button id="startBtn">ACTIVER LA CAMÉRA</button>
+        <button id="stopBtn" disabled>ARRÊTER</button>
     </div>
-    
-    <button id="startBtn">Démarrer</button>
-    <button id="stopBtn" disabled>Arrêter</button>
-    
     <div id="result"></div>
-    
+
     <script>
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
         const video = document.getElementById('video');
-        const resultDiv = document.getElementById('result');
-        
-        // Démarrer la caméra
-        startBtn.addEventListener('click', async () => {
+        const result = document.getElementById('result');
+
+        // 1. Démarrer la caméra (fonction garantie)
+        startBtn.onclick = async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    }
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
                 });
                 video.srcObject = stream;
+                video.play();
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
-                resultDiv.textContent = "Recherche de code VIN...";
-                
-                // Détection simple (simulée)
-                setTimeout(() => {
-                    const fakeVin = "1HGCM82633A123456"; // Exemple de VIN
-                    resultDiv.textContent = `VIN détecté: ${fakeVin}`;
-                }, 2000);
-                
+                result.textContent = "Caméra activée - Pointez vers un VIN";
             } catch (err) {
-                resultDiv.textContent = "Erreur: " + err.message;
+                result.textContent = "ERREUR : " + err.message;
             }
-        });
-        
-        // Arrêter la caméra
-        stopBtn.addEventListener('click', () => {
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-                video.srcObject = null;
-            }
+        };
+
+        // 2. Arrêter la caméra
+        stopBtn.onclick = () => {
+            video.srcObject.getTracks().forEach(track => track.stop());
             startBtn.disabled = false;
             stopBtn.disabled = true;
-            resultDiv.textContent = "Scanner arrêté";
-        });
+            result.textContent = "Caméra arrêtée";
+        };
+
+        // 3. Simulation de détection (à remplacer par un vrai scanner)
+        setTimeout(() => {
+            if (video.srcObject) {
+                result.innerHTML = '<span style="color:green">VIN DÉTECTÉ (simulation) :<br>1HGCM82633A123456</span>';
+            }
+        }, 3000);
     </script>
 </body>
 </html>
