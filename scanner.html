@@ -3,50 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alignement VIN</title>
+    <title>Lecteur VIN en Direct</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
-            background: #f0f0f0;
+            padding: 10px;
+            background: #111;
+            color: white;
             text-align: center;
         }
-        .scanner-box {
+        .scanner-container {
             position: relative;
             width: 100%;
             max-width: 500px;
             margin: 0 auto;
             border-radius: 8px;
             overflow: hidden;
-            background: #000;
         }
         #video {
             width: 100%;
             display: block;
         }
-        .align-line {
+        .scan-line {
             position: absolute;
             top: 50%;
             left: 0;
             right: 0;
-            height: 3px;
+            height: 4px;
             background: red;
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
         }
-        .instruction {
+        #vinResult {
             position: absolute;
             bottom: 20px;
             left: 0;
             right: 0;
-            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            font-size: 22px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 3px;
             text-align: center;
-            font-size: 16px;
-            text-shadow: 0 1px 3px black;
         }
         button {
             padding: 12px 24px;
-            margin: 15px 5px;
+            margin: 10px;
             font-size: 16px;
             border: none;
             border-radius: 6px;
@@ -59,22 +61,27 @@
 <body>
     <h1>Alignez le VIN sur la ligne rouge</h1>
     
-    <div class="scanner-box">
+    <div class="scanner-container">
         <video id="video" playsinline></video>
-        <div class="align-line"></div>
-        <div class="instruction">Maintenez le téléphone parallèle au VIN</div>
+        <div class="scan-line"></div>
+        <div id="vinResult">Prêt à scanner...</div>
     </div>
     
-    <button id="startBtn">Démarrer la caméra</button>
+    <button id="startBtn">Démarrer</button>
     <button id="stopBtn" disabled>Arrêter</button>
 
+    <!-- Bibliothèque Tesseract.js pour la lecture des caractères -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <script>
         const video = document.getElementById('video');
+        const vinResult = document.getElementById('vinResult');
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
+        
         let stream = null;
+        let scanInterval;
 
-        // Démarrer la caméra arrière uniquement
+        // 1. Démarrer la caméra
         async function startCamera() {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
@@ -86,32 +93,69 @@
                 });
                 
                 video.srcObject = stream;
-                video.play();
+                await video.play();
+                
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
+                vinResult.textContent = "Analyse en cours...";
+                
+                // Lancer la détection périodique
+                scanInterval = setInterval(readVinFromCamera, 2000); // Toutes les 2 secondes
                 
             } catch (err) {
-                alert("Erreur : " + err.message);
-                console.error(err);
+                vinResult.textContent = "Erreur : " + err.message;
             }
         }
 
-        // Arrêter la caméra
+        // 2. Lire le VIN depuis la caméra
+        async function readVinFromCamera() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = 100; // Hauteur réduite pour se concentrer sur la ligne
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Capturer autour de la ligne rouge (50px au-dessus/en dessous)
+            const y = (video.videoHeight / 2) - 50;
+            ctx.drawImage(video, 0, y, video.videoWidth, 100, 0, 0, canvas.width, canvas.height);
+            
+            // Utiliser Tesseract.js pour lire le texte
+            try {
+                const { data: { text } } = await Tesseract.recognize(
+                    canvas,
+                    'eng',
+                    { 
+                        tessedit_char_whitelist: 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789',
+                        preserve_interword_spaces: 0
+                    }
+                );
+                
+                // Filtrer pour ne garder que les caractères valides d'un VIN
+                const detectedVin = text.replace(/[^A-HJ-NPR-Z0-9]/g, '').substring(0, 17);
+                
+                if (detectedVin.length >= 10) { // Un VIN partiel est acceptable
+                    vinResult.textContent = detectedVin;
+                }
+            } catch (err) {
+                console.log("Erreur de lecture :", err);
+            }
+        }
+
+        // 3. Arrêter la caméra
         function stopCamera() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
             }
+            clearInterval(scanInterval);
             startBtn.disabled = false;
             stopBtn.disabled = true;
+            vinResult.textContent = "Prêt à scanner...";
         }
 
         // Événements
         startBtn.addEventListener('click', startCamera);
         stopBtn.addEventListener('click', stopCamera);
-        
-        // Nettoyage
-        window.addEventListener('beforeunload', stopCamera);
     </script>
 </body>
 </html>
