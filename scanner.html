@@ -3,45 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualisation VIN</title>
+    <title>Alignement VIN</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background: #111;
-            color: white;
+            background: #f0f0f0;
             text-align: center;
         }
-        .container {
+        .scanner-box {
             position: relative;
+            width: 100%;
             max-width: 500px;
             margin: 0 auto;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
         }
         #video {
             width: 100%;
             display: block;
-            border-radius: 8px;
-            transform: scaleX(-1); /* Miroir pour meilleure expérience */
         }
-        .vin-display {
+        .align-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: red;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+        }
+        .instruction {
             position: absolute;
             bottom: 20px;
             left: 0;
             right: 0;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            font-size: 24px;
-            letter-spacing: 3px;
-            font-family: 'Courier New', monospace;
+            color: white;
             text-align: center;
-        }
-        .controls {
-            margin-top: 20px;
+            font-size: 16px;
+            text-shadow: 0 1px 3px black;
         }
         button {
             padding: 12px 24px;
-            margin: 10px;
+            margin: 15px 5px;
             font-size: 16px;
             border: none;
             border-radius: 6px;
@@ -49,56 +54,45 @@
             color: white;
             cursor: pointer;
         }
-        #flipBtn {
-            background: #555;
-        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <h1>Alignez le VIN sur la ligne rouge</h1>
+    
+    <div class="scanner-box">
         <video id="video" playsinline></video>
-        <div class="vin-display" id="vinDisplay">ALIGNEZ LE VIN</div>
+        <div class="align-line"></div>
+        <div class="instruction">Maintenez le téléphone parallèle au VIN</div>
     </div>
     
-    <div class="controls">
-        <button id="startBtn">ACTIVER CAMÉRA</button>
-        <button id="flipBtn">INVERSER CAMÉRA</button>
-    </div>
+    <button id="startBtn">Démarrer la caméra</button>
+    <button id="stopBtn" disabled>Arrêter</button>
 
     <script>
         const video = document.getElementById('video');
-        const vinDisplay = document.getElementById('vinDisplay');
         const startBtn = document.getElementById('startBtn');
-        const flipBtn = document.getElementById('flipBtn');
-        
+        const stopBtn = document.getElementById('stopBtn');
         let stream = null;
-        let usingFrontCamera = false;
 
-        // Démarrer la caméra
+        // Démarrer la caméra arrière uniquement
         async function startCamera() {
             try {
-                stopCamera();
-                
-                const constraints = {
+                stream = await navigator.mediaDevices.getUserMedia({
                     video: {
+                        facingMode: 'environment', // Caméra arrière uniquement
                         width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        facingMode: usingFrontCamera ? 'user' : 'environment'
+                        height: { ideal: 720 }
                     }
-                };
+                });
                 
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
                 video.play();
-                
-                startBtn.textContent = "ARRÊTER CAMÉRA";
-                startBtn.style.background = "#FF3B30";
-                
-                // Mise à jour continue de l'affichage
-                requestAnimationFrame(updateDisplay);
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
                 
             } catch (err) {
-                alert("Erreur: " + err.message);
+                alert("Erreur : " + err.message);
+                console.error(err);
             }
         }
 
@@ -108,42 +102,14 @@
                 stream.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
             }
-            startBtn.textContent = "ACTIVER CAMÉRA";
-            startBtn.style.background = "#007AFF";
-            vinDisplay.textContent = "CAMÉRA ÉTEINTE";
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
         }
 
-        // Basculer entre caméras
-        flipBtn.addEventListener('click', () => {
-            usingFrontCamera = !usingFrontCamera;
-            if (video.srcObject) {
-                startCamera();
-            }
-        });
-
-        // Toggle caméra
-        startBtn.addEventListener('click', () => {
-            if (video.srcObject) {
-                stopCamera();
-            } else {
-                startCamera();
-            }
-        });
-
-        // Mettre à jour l'affichage
-        function updateDisplay() {
-            if (video.srcObject) {
-                requestAnimationFrame(updateDisplay);
-                
-                // Ici vous pourriez ajouter un traitement d'image si nécessaire
-                // Pour l'instant on affiche juste le flux vidéo brut
-                
-                // Simulation d'affichage (à remplacer par votre logique)
-                vinDisplay.textContent = "ALIGNEZ LE VIN";
-                vinDisplay.style.color = "#FFFFFF";
-            }
-        }
-
+        // Événements
+        startBtn.addEventListener('click', startCamera);
+        stopBtn.addEventListener('click', stopCamera);
+        
         // Nettoyage
         window.addEventListener('beforeunload', stopCamera);
     </script>
