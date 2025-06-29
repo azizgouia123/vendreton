@@ -2,161 +2,198 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner VIN - Solution Garantie</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scanner VIN Mobile</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            padding: 20px;
-            background: #f0f2f5;
+            padding: 15px;
+            background: #f9f9f9;
             text-align: center;
+            -webkit-text-size-adjust: 100%;
         }
-        #scanner-container {
+        #scanner-box {
             position: relative;
             width: 100%;
-            max-width: 500px;
+            height: 60vh;
+            max-height: 500px;
             margin: 20px auto;
-            border-radius: 10px;
-            overflow: hidden;
             background: #000;
+            border-radius: 12px;
+            overflow: hidden;
         }
         #video {
             width: 100%;
-            display: block;
+            height: 100%;
+            object-fit: cover;
         }
-        .scan-frame {
+        .scan-guide {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             width: 80%;
             height: 100px;
-            border: 4px solid red;
-            box-sizing: border-box;
+            border: 4px solid #FF3B30;
+            box-shadow: 0 0 0 100vmax rgba(0,0,0,0.7);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 20px;
+            color: white;
+            font-weight: bold;
         }
-        button {
-            padding: 12px 24px;
-            margin: 10px;
+        .btn {
+            padding: 14px 28px;
             font-size: 16px;
+            border-radius: 8px;
+            border: none;
+            margin: 10px;
+            font-weight: 600;
+        }
+        #startBtn {
             background: #007AFF;
             color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
+        }
+        #stopBtn {
+            background: #FF3B30;
+            color: white;
         }
         #error {
-            color: red;
-            margin: 15px 0;
-            min-height: 20px;
+            color: #FF3B30;
+            margin: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255,59,48,0.1);
         }
     </style>
 </head>
 <body>
-    <h1>Scanner VIN</h1>
+    <h1 style="color: #1C1C1E;">Scanner VIN Mobile</h1>
     
-    <div id="scanner-container">
-        <video id="video" playsinline></video>
-        <div class="scan-frame"></div>
+    <div id="scanner-box">
+        <video id="video" playsinline webkit-playsinline></video>
+        <div class="scan-guide">Alignez le code dans le cadre</div>
     </div>
     
-    <button id="startBtn">DÉMARRER LA CAMÉRA</button>
-    <button id="stopBtn" disabled>ARRÊTER</button>
+    <button id="startBtn" class="btn">ACTIVER LA CAMÉRA</button>
+    <button id="stopBtn" class="btn" disabled>ARRÊTER</button>
     
     <div id="error"></div>
-    
+
     <script>
+        // Éléments DOM
         const video = document.getElementById('video');
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
         const errorDiv = document.getElementById('error');
-        let stream = null;
-
-        // 1. Vérifier les permissions
-        async function checkPermissions() {
-            try {
-                const permissionStatus = await navigator.permissions.query({ name: 'camera' });
-                if (permissionStatus.state === 'denied') {
-                    throw new Error("Permission caméra refusée. Réinitialisez les permissions dans les paramètres de votre navigateur.");
-                }
-            } catch (e) {
-                console.warn("L'API Permissions n'est pas supportée", e);
-            }
+        
+        // 1. Vérifier la disponibilité de la caméra
+        function checkCameraSupport() {
+            return (
+                navigator.mediaDevices && 
+                navigator.mediaDevices.getUserMedia &&
+                'srcObject' in video
+            );
         }
-
-        // 2. Démarrer la caméra avec fallbacks
+        
+        // 2. Démarrer la caméra (optimisé mobile)
         async function startCamera() {
+            if (!checkCameraSupport()) {
+                showError("Votre navigateur ne supporte pas l'accès caméra");
+                return;
+            }
+            
             try {
-                errorDiv.textContent = "Initialisation...";
-                
-                // Essai 1: Caméra arrière (environment)
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            facingMode: 'environment',
-                            width: { min: 640, ideal: 1280 },
-                            height: { min: 480, ideal: 720 }
-                        }
-                    });
-                } catch (err) {
-                    console.log("Essai caméra arrière échoué, tentative caméra avant...");
-                    // Essai 2: Caméra avant (user)
-                    stream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            facingMode: 'user',
-                            width: { min: 640 },
-                            height: { min: 480 }
-                        }
-                    });
-                }
-                
-                video.srcObject = stream;
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
                 errorDiv.textContent = "";
                 
-                // Vérifier que le flux est actif
-                const videoTrack = stream.getVideoTracks()[0];
-                if (videoTrack.readyState === 'ended') {
-                    throw new Error("Le flux vidéo s'est interrompu");
+                // Configuration mobile optimale
+                const constraints = {
+                    video: {
+                        width: { min: 640, ideal: 1280 },
+                        height: { min: 480, ideal: 720 },
+                        facingMode: { ideal: 'environment' },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: false
+                };
+                
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                // iOS specific fix
+                if ('srcObject' in video) {
+                    video.srcObject = stream;
+                } else {
+                    video.src = window.URL.createObjectURL(stream);
                 }
                 
+                // Attendre que la vidéo soit prête
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = resolve;
+                });
+                
+                video.play();
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                
             } catch (err) {
-                errorDiv.textContent = `ERREUR: ${err.message || err}`;
-                console.error("Erreur caméra:", err);
-                
-                // Solutions suggérées
-                const solutions = [
-                    "Vérifiez que votre appareil a une caméra",
-                    "Autorisez l'accès à la caméra dans les permissions",
-                    "Essayez sur un autre navigateur (Chrome/Firefox)",
-                    "Redémarrez votre appareil"
-                ];
-                
-                errorDiv.innerHTML += `<br><br>Solutions possibles:<ul>${
-                    solutions.map(s => `<li>${s}</li>`).join('')
-                }</ul>`;
+                handleCameraError(err);
             }
         }
-
-        // 3. Arrêter la caméra
+        
+        // 3. Gestion des erreurs détaillée
+        function handleCameraError(err) {
+            console.error("Erreur caméra:", err);
+            
+            let errorMsg = "Erreur d'accès à la caméra";
+            
+            if (err.name === 'NotAllowedError') {
+                errorMsg = "Permission refusée. Autorisez l'accès dans les paramètres";
+            } else if (err.name === 'NotFoundError') {
+                errorMsg = "Aucune caméra détectée";
+            } else if (err.name === 'NotReadableError') {
+                errorMsg = "Caméra déjà utilisée par une autre application";
+            }
+            
+            showError(`${errorMsg} (${err.name})`);
+        }
+        
+        function showError(msg) {
+            errorDiv.innerHTML = `
+                <strong>ERREUR:</strong> ${msg}
+                <br><br>
+                <div style="text-align: left; font-size: 14px;">
+                    <strong>Solutions:</strong>
+                    <ol>
+                        <li>Ouvrir dans Chrome/Firefox</li>
+                        <li>Vérifier les permissions caméra</li>
+                        <li>Redémarrer l'appareil</li>
+                        <li>Essayer une autre caméra</li>
+                    </ol>
+                </div>
+            `;
+        }
+        
+        // 4. Arrêter la caméra
         function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
-                stream = null;
             }
             startBtn.disabled = false;
             stopBtn.disabled = true;
         }
-
+        
         // Événements
         startBtn.addEventListener('click', startCamera);
         stopBtn.addEventListener('click', stopCamera);
-
-        // Vérifier les permissions au chargement
-        window.addEventListener('DOMContentLoaded', checkPermissions);
+        
+        // iOS specific - demande de permission au toucher
+        document.body.addEventListener('touchstart', function firstTouch() {
+            document.body.removeEventListener('touchstart', firstTouch);
+            startBtn.style.display = 'inline-block';
+        }, { once: true });
     </script>
 </body>
 </html>
