@@ -3,125 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Capture VIN</title>
+    <title>Visualisation VIN</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background: #000;
+            background: #111;
             color: white;
             text-align: center;
         }
-        #scanner-container {
+        .container {
             position: relative;
-            width: 100%;
             max-width: 500px;
-            margin: 20px auto;
+            margin: 0 auto;
         }
         #video {
             width: 100%;
             display: block;
             border-radius: 8px;
+            transform: scaleX(-1); /* Miroir pour meilleure expérience */
         }
-        .guide-line {
+        .vin-display {
             position: absolute;
-            top: 50%;
+            bottom: 20px;
             left: 0;
             right: 0;
-            height: 4px;
-            background: rgba(0, 255, 0, 0.8);
-            z-index: 10;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            font-size: 24px;
+            letter-spacing: 3px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+        .controls {
+            margin-top: 20px;
         }
         button {
-            padding: 15px 30px;
-            margin: 15px;
-            font-size: 18px;
+            padding: 12px 24px;
+            margin: 10px;
+            font-size: 16px;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             background: #007AFF;
             color: white;
             cursor: pointer;
         }
-        #captureBtn {
-            background: #34C759;
-            display: none;
-        }
-        #canvas {
-            display: none;
+        #flipBtn {
+            background: #555;
         }
     </style>
 </head>
 <body>
-    <h1>Alignez le VIN sur la ligne verte</h1>
-    
-    <div id="scanner-container">
+    <div class="container">
         <video id="video" playsinline></video>
-        <div class="guide-line"></div>
+        <div class="vin-display" id="vinDisplay">ALIGNEZ LE VIN</div>
     </div>
     
-    <button id="startBtn">ACTIVER LA CAMÉRA</button>
-    <button id="captureBtn">CAPTURER</button>
-    
-    <canvas id="canvas"></canvas>
+    <div class="controls">
+        <button id="startBtn">ACTIVER CAMÉRA</button>
+        <button id="flipBtn">INVERSER CAMÉRA</button>
+    </div>
 
     <script>
         const video = document.getElementById('video');
+        const vinDisplay = document.getElementById('vinDisplay');
         const startBtn = document.getElementById('startBtn');
-        const captureBtn = document.getElementById('captureBtn');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        const flipBtn = document.getElementById('flipBtn');
         
         let stream = null;
+        let usingFrontCamera = false;
 
         // Démarrer la caméra
-        startBtn.addEventListener('click', async () => {
+        async function startCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    }
-                });
+                stopCamera();
                 
+                const constraints = {
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: usingFrontCamera ? 'user' : 'environment'
+                    }
+                };
+                
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
                 video.play();
-                startBtn.style.display = 'none';
-                captureBtn.style.display = 'inline-block';
+                
+                startBtn.textContent = "ARRÊTER CAMÉRA";
+                startBtn.style.background = "#FF3B30";
+                
+                // Mise à jour continue de l'affichage
+                requestAnimationFrame(updateDisplay);
                 
             } catch (err) {
-                alert("Erreur caméra: " + err.message);
+                alert("Erreur: " + err.message);
             }
-        });
-
-        // Capturer l'image
-        captureBtn.addEventListener('click', () => {
-            // Ajuster le canvas à la taille de la vidéo
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            // Capturer l'image
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // Ici vous pouvez envoyer l'image à votre serveur
-            const imageData = canvas.toDataURL('image/jpeg');
-            
-            // Exemple d'affichage (à remplacer par votre traitement)
-            alert("Image capturée! Envoyez cette image à votre système:");
-            console.log("Image data:", imageData);
-            
-            // Réafficher le bouton de capture
-            captureBtn.style.display = 'none';
-            startBtn.style.display = 'inline-block';
-            stopCamera();
-        });
+        }
 
         // Arrêter la caméra
         function stopCamera() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
+            }
+            startBtn.textContent = "ACTIVER CAMÉRA";
+            startBtn.style.background = "#007AFF";
+            vinDisplay.textContent = "CAMÉRA ÉTEINTE";
+        }
+
+        // Basculer entre caméras
+        flipBtn.addEventListener('click', () => {
+            usingFrontCamera = !usingFrontCamera;
+            if (video.srcObject) {
+                startCamera();
+            }
+        });
+
+        // Toggle caméra
+        startBtn.addEventListener('click', () => {
+            if (video.srcObject) {
+                stopCamera();
+            } else {
+                startCamera();
+            }
+        });
+
+        // Mettre à jour l'affichage
+        function updateDisplay() {
+            if (video.srcObject) {
+                requestAnimationFrame(updateDisplay);
+                
+                // Ici vous pourriez ajouter un traitement d'image si nécessaire
+                // Pour l'instant on affiche juste le flux vidéo brut
+                
+                // Simulation d'affichage (à remplacer par votre logique)
+                vinDisplay.textContent = "ALIGNEZ LE VIN";
+                vinDisplay.style.color = "#FFFFFF";
             }
         }
 
