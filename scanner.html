@@ -1,161 +1,313 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr-CA">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lecteur VIN en Direct</title>
+    <title>VendreTonAutoRapide.ca | Scanner VIN</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 10px;
-            background: #111;
-            color: white;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
             text-align: center;
         }
-        .scanner-container {
+        h1 {
+            color: #0056B3; /* Bleu QC */
+            margin-bottom: 20px;
+        }
+        #videoContainer {
             position: relative;
             width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
+            max-width: 600px;
+            background-color: #000;
             border-radius: 8px;
             overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
         }
-        #video {
-            width: 100%;
+        video {
             display: block;
+            width: 100%;
+            height: auto;
+            transform: scaleX(-1); /* Miroir pour caméra frontale, à ajuster pour arrière */
+            /* Pour caméra arrière, vous pourriez ne pas vouloir le miroir, ou le contrôler avec JS */
         }
-        .scan-line {
+        #vinOverlay {
             position: absolute;
             top: 50%;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: red;
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
-        }
-        #vinResult {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            right: 0;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            font-size: 22px;
-            font-family: 'Courier New', monospace;
-            letter-spacing: 3px;
-            text-align: center;
+            left: 50%;
+            width: 80%; /* Largeur de la zone de détection VIN */
+            height: 10%; /* Hauteur de la zone de détection VIN */
+            border: 2px solid #E31937; /* Rouge Alerte */
+            transform: translate(-50%, -50%);
+            pointer-events: none; /* Permet de cliquer à travers */
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
         }
         button {
-            padding: 12px 24px;
-            margin: 10px;
-            font-size: 16px;
-            border: none;
-            border-radius: 6px;
-            background: #007AFF;
+            background-color: #2E8B57; /* Vert Confiance */
             color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
             cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        button:hover {
+            background-color: #267a4b;
+        }
+        #result {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #e6f7ff; /* Bleu clair */
+            border: 1px solid #b3e0ff;
+            border-radius: 8px;
+            min-height: 50px;
+            width: 100%;
+            max-width: 600px;
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #0056B3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #status {
+            margin-top: 15px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        canvas {
+            display: none; /* Utilisé pour le traitement, non affiché */
         }
     </style>
 </head>
 <body>
-    <h1>Alignez le VIN sur la ligne rouge</h1>
-    
-    <div class="scanner-container">
-        <video id="video" playsinline></video>
-        <div class="scan-line"></div>
-        <div id="vinResult">Prêt à scanner...</div>
-    </div>
-    
-    <button id="startBtn">Démarrer</button>
-    <button id="stopBtn" disabled>Arrêter</button>
+    <h1>Scanner de VIN Rapide</h1>
+    <p>Cadrez le numéro d'identification du véhicule (VIN) dans la zone rouge.</p>
 
-    <!-- Bibliothèque Tesseract.js pour la lecture des caractères -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <div id="videoContainer">
+        <video id="video" playsinline autoplay></video>
+        <div id="vinOverlay">Cadrez le VIN ici</div>
+    </div>
+
+    <button id="captureButton">Scanner le VIN</button>
+    <p id="status">Chargement de la caméra...</p>
+
+    <div id="result">VIN : Non détecté</div>
+
+    <canvas id="canvas" style="display: none;"></canvas>
+
+    <script src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+
     <script>
         const video = document.getElementById('video');
-        const vinResult = document.getElementById('vinResult');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        
-        let stream = null;
-        let scanInterval;
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const captureButton = document.getElementById('captureButton');
+        const resultDiv = document.getElementById('result');
+        const statusDiv = document.getElementById('status');
 
-        // 1. Démarrer la caméra
+        let streaming = false; // Indicateur de streaming vidéo
+
+        // Fonction appelée quand OpenCV.js est prêt
+        function onOpenCvReady() {
+            statusDiv.textContent = 'OpenCV.js chargé. Chargement de la caméra...';
+            startCamera();
+        }
+
+        // Fonction pour démarrer la caméra
         async function startCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
+                // Demander la caméra arrière par défaut si disponible
+                const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        facingMode: 'environment', // Caméra arrière uniquement
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    }
+                        facingMode: { exact: "environment" } // Préfère la caméra arrière
+                    },
+                    audio: false
                 });
-                
                 video.srcObject = stream;
-                await video.play();
-                
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                vinResult.textContent = "Analyse en cours...";
-                
-                // Lancer la détection périodique
-                scanInterval = setInterval(readVinFromCamera, 2000); // Toutes les 2 secondes
-                
-            } catch (err) {
-                vinResult.textContent = "Erreur : " + err.message;
-            }
-        }
+                video.play();
+                statusDiv.textContent = 'Caméra active. Cadrez le VIN.';
 
-        // 2. Lire le VIN depuis la caméra
-        async function readVinFromCamera() {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = 100; // Hauteur réduite pour se concentrer sur la ligne
-            
-            const ctx = canvas.getContext('2d');
-            
-            // Capturer autour de la ligne rouge (50px au-dessus/en dessous)
-            const y = (video.videoHeight / 2) - 50;
-            ctx.drawImage(video, 0, y, video.videoWidth, 100, 0, 0, canvas.width, canvas.height);
-            
-            // Utiliser Tesseract.js pour lire le texte
-            try {
-                const { data: { text } } = await Tesseract.recognize(
-                    canvas,
-                    'eng',
-                    { 
-                        tessedit_char_whitelist: 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789',
-                        preserve_interword_spaces: 0
+                video.addEventListener('canplay', (ev) => {
+                    if (!streaming) {
+                        // Ajuster la taille du canvas à celle de la vidéo pour le traitement
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        streaming = true;
                     }
-                );
-                
-                // Filtrer pour ne garder que les caractères valides d'un VIN
-                const detectedVin = text.replace(/[^A-HJ-NPR-Z0-9]/g, '').substring(0, 17);
-                
-                if (detectedVin.length >= 10) { // Un VIN partiel est acceptable
-                    vinResult.textContent = detectedVin;
-                }
+                }, false);
+
             } catch (err) {
-                console.log("Erreur de lecture :", err);
+                console.error("Erreur d'accès à la caméra: ", err);
+                statusDiv.textContent = 'Erreur: Impossible d\'accéder à la caméra. Assurez-vous d\'être sur HTTPS.';
+                // Tentative avec la caméra frontale si la caméra arrière échoue (moins idéal pour VIN)
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    video.srcObject = stream;
+                    video.play();
+                    statusDiv.textContent = 'Caméra frontale active. Cadrez le VIN.';
+                } catch (frontErr) {
+                    statusDiv.textContent = 'Erreur grave: Aucune caméra accessible. ' + frontErr.message;
+                    console.error("Erreur d'accès à la caméra frontale: ", frontErr);
+                }
             }
         }
 
-        // 3. Arrêter la caméra
-        function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                video.srcObject = null;
+        // Fonction pour valider le format du VIN
+        // C'est ici que la logique de validation "trop fiable" sera développée
+        function validateVIN(vin) {
+            // Un VIN est généralement composé de 17 caractères (lettres et chiffres)
+            // et n'utilise pas les lettres I, O, Q pour éviter la confusion.
+            const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/i; // Regex pour 17 caractères alphanumériques sans I, O, Q
+            
+            // Supprimer les espaces ou caractères non-VIN reconnus par OCR
+            const cleanedVin = vin.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
+
+            if (cleanedVin.length === 17 && vinRegex.test(cleanedVin)) {
+                // Ici, on pourrait ajouter une logique de checksum VIN si nécessaire
+                // Pour une fiabilité à 100%, une vérification du checksum est fortement recommandée.
+                // Exemple (très simplifié et ne couvre pas tous les standards)
+                // if (calculateVINChecksum(cleanedVin) === expectedChecksum) {
+                //     return cleanedVin;
+                // } else {
+                //     return null; // Checksum invalide
+                // }
+                return cleanedVin; // Retourne le VIN nettoyé si le format de base est bon
             }
-            clearInterval(scanInterval);
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            vinResult.textContent = "Prêt à scanner...";
+            return null; // Format VIN invalide
         }
 
-        // Événements
-        startBtn.addEventListener('click', startCamera);
-        stopBtn.addEventListener('click', stopCamera);
+        // Fonction de capture et traitement OCR
+        captureButton.addEventListener('click', async () => {
+            if (!streaming) {
+                statusDiv.textContent = "La caméra n'est pas prête.";
+                return;
+            }
+
+            statusDiv.textContent = "Capture et analyse en cours...";
+            resultDiv.textContent = "VIN : Analyse en cours...";
+
+            // Dessiner l'image de la vidéo sur le canvas
+            // On peut cibler uniquement la zone du VINOverlay ici pour optimiser l'OCR
+            const overlay = document.getElementById('vinOverlay');
+            const videoRect = video.getBoundingClientRect();
+            const overlayRect = overlay.getBoundingClientRect();
+
+            // Calculer les coordonnées du VIN sur la vidéo
+            // Ces calculs sont approximatifs et dépendent du style CSS du overlay et de la taille de la vidéo
+            // Pour une précision absolue, il faut ajuster en fonction du rapport d'aspect de la vidéo et du canvas
+            const scaleX = canvas.width / videoRect.width;
+            const scaleY = canvas.height / videoRect.height;
+            
+            const sx = (overlayRect.left - videoRect.left) * scaleX;
+            const sy = (overlayRect.top - videoRect.top) * scaleY;
+            const sWidth = overlayRect.width * scaleX;
+            const sHeight = overlayRect.height * scaleY;
+
+            // Assurez-vous que les dimensions sont positives
+            if (sWidth <= 0 || sHeight <= 0) {
+                 statusDiv.textContent = "Erreur: Dimensions de l'overlay invalides pour la capture.";
+                 return;
+            }
+
+            // Dessiner uniquement la zone du VIN
+            context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
+
+            // Obtenir les données de l'image du canvas
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            let src = cv.matFromImageData(imageData); // Convertir en Mat OpenCV
+
+            // --- Début du prétraitement d'image avancé avec OpenCV.js ---
+            let gray = new cv.Mat();
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0); // Convertir en niveaux de gris
+
+            // Application de l'égalisation d'histogramme adaptative (CLAHE)
+            // Utile pour améliorer le contraste dans des conditions de luminosité variées
+            let clahe = new cv.CLAHE(4, new cv.Size(8, 8)); // Clip limit 4, tile grid 8x8
+            clahe.apply(gray, gray);
+            clahe.delete();
+
+            // Amélioration du contraste et binarisation adaptative
+            // Ceci est une approche, d'autres peuvent être explorées (ex: seuillage de Niblack/Sauvola)
+            let binary = new cv.Mat();
+            cv.adaptiveThreshold(gray, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
+
+            // Optionnel: Dilatation/Érosion pour nettoyer les caractères si besoin
+            // let kernel = cv.Mat.ones(2, 2, cv.CV_8U);
+            // cv.erode(binary, binary, kernel);
+            // cv.dilate(binary, binary, kernel);
+            // kernel.delete();
+
+            // Convertir la Mat OpenCV prétraitée en ImageData pour Tesseract.js
+            cv.imshow('canvas', binary); // Dessine la Mat prétraitée sur le canvas (visible ou non)
+            const processedImageDataURL = canvas.toDataURL('image/png');
+            // --- Fin du prétraitement d'image ---
+
+            src.delete();
+            gray.delete();
+            binary.delete();
+
+            // Lancer l'OCR avec Tesseract.js
+            try {
+                // Nous allons entraîner un modèle personnalisé, mais pour le prototype, utilisons 'eng'
+                // Le chemin pour les données de langue personnalisées serait configuré ici:
+                // `langPath: '/path/to/custom/tessdata/'` ou `worker.loadLanguage('vin_model');`
+                const worker = await Tesseract.createWorker({
+                    // logger: m => console.log(m) // Pour voir la progression de l'OCR
+                });
+
+                await worker.loadLanguage('eng'); // Utilise le modèle anglais par défaut pour le prototype
+                await worker.initialize('eng');
+                
+                // Configurer Tesseract pour qu'il s'attende à des caractères spécifiques au VIN
+                // Ceci est crucial pour la fiabilité, à ajuster avec le modèle entraîné
+                await worker.setParameters({
+                    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPRSTUVWXYZ' // Exclut I, O, Q
+                });
+
+                const { data: { text } } = await worker.recognize(processedImageDataURL);
+
+                await worker.terminate();
+
+                const recognizedVIN = text.trim();
+                const validatedVIN = validateVIN(recognizedVIN);
+
+                if (validatedVIN) {
+                    resultDiv.textContent = `VIN : ${validatedVIN}`;
+                    resultDiv.style.color = '#2E8B57'; // Vert si valide
+                    statusDiv.textContent = 'VIN reconnu et validé avec succès !';
+                } else {
+                    resultDiv.textContent = `VIN : ${recognizedVIN} (Non valide)`;
+                    resultDiv.style.color = '#E31937'; // Rouge si non valide
+                    statusDiv.textContent = 'VIN reconnu, mais le format est incorrect. Réessayez.';
+                }
+
+            } catch (ocrError) {
+                console.error("Erreur OCR: ", ocrError);
+                resultDiv.textContent = "VIN : Erreur lors de la reconnaissance.";
+                resultDiv.style.color = '#E31937';
+                statusDiv.textContent = "Une erreur est survenue pendant l'analyse OCR.";
+            }
+        });
     </script>
 </body>
 </html>
