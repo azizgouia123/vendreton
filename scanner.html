@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VendreTonAutoRapide.ca | Scanner VIN</title>
     <style>
-        /* ... (votre CSS existant ici) ... */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -37,8 +36,7 @@
             display: block;
             width: 100%;
             height: auto;
-            transform: scaleX(-1); /* Miroir pour caméra frontale, à ajuster pour arrière */
-            /* Pour caméra arrière, vous pourriez ne pas vouloir le miroir, ou le contrôler avec JS */
+            /* La transformation miroir a été retirée pour un affichage réel de la caméra arrière */
         }
         #vinOverlay {
             position: absolute;
@@ -46,7 +44,7 @@
             left: 50%;
             width: 80%; /* Largeur de la zone de détection VIN */
             height: 10%; /* Hauteur de la zone de détection VIN */
-            border: 2px solid #E31937; /* Rouge Alerte */
+            border: 2px solid #E31937; /* Rouge Alerte, zone de ciblage */
             transform: translate(-50%, -50%);
             pointer-events: none; /* Permet de cliquer à travers */
             box-sizing: border-box;
@@ -109,11 +107,11 @@
     </div>
 
     <button id="captureButton">Scanner le VIN</button>
-    <p id="status">Chargement de la caméra...</p>
+    <p id="status">Chargement des ressources...</p>
 
     <div id="result">VIN : Non détecté</div>
 
-    <canvas id="canvas" style="display: none;"></canvas>
+    <canvas id="canvas"></canvas>
 
     <script>
         const video = document.getElementById('video');
@@ -124,20 +122,32 @@
         const statusDiv = document.getElementById('status');
 
         let streaming = false; // Indicateur de streaming vidéo
+        let opencvReady = false; // Indicateur de disponibilité d'OpenCV
+        let tesseractWorker = null; // Variable pour stocker le worker Tesseract
+
+        // --- 1. Initialisation des bibliothèques et de la caméra ---
 
         // Fonction appelée quand OpenCV.js est prêt
         function onOpenCvReady() {
+            opencvReady = true;
             statusDiv.textContent = 'OpenCV.js chargé. Chargement de la caméra...';
             startCamera();
         }
 
         // Fonction pour démarrer la caméra
         async function startCamera() {
+            if (!opencvReady) {
+                statusDiv.textContent = 'Erreur : OpenCV.js n\'est pas encore chargé.';
+                return;
+            }
+
             try {
-                // Demander la caméra arrière par défaut si disponible
+                // Tente de récupérer la caméra arrière d'abord
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        facingMode: { exact: "environment" } // Préfère la caméra arrière
+                        facingMode: { exact: "environment" }, // Préfère la caméra arrière
+                        width: { ideal: 1920 }, // Résolution plus élevée pour meilleure détection
+                        height: { ideal: 1080 }
                     },
                     audio: false
                 });
@@ -147,22 +157,31 @@
 
                 video.addEventListener('canplay', (ev) => {
                     if (!streaming) {
-                        // Ajuster la taille du canvas à celle de la vidéo pour le traitement
                         canvas.width = video.videoWidth;
                         canvas.height = video.videoHeight;
                         streaming = true;
+                        // Initialise le worker Tesseract une fois la vidéo prête
+                        initializeTesseractWorker();
                     }
                 }, false);
 
             } catch (err) {
                 console.error("Erreur d'accès à la caméra: ", err);
                 statusDiv.textContent = 'Erreur: Impossible d\'accéder à la caméra. Assurez-vous d\'être sur HTTPS.';
-                // Tentative avec la caméra frontale si la caméra arrière échoue (moins idéal pour VIN)
+                // Si la caméra arrière échoue, tente la caméra frontale comme fallback
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                     video.srcObject = stream;
                     video.play();
-                    statusDiv.textContent = 'Caméra frontale active. Cadrez le VIN.';
+                    statusDiv.textContent = 'Caméra frontale active. Cadrez le VIN. (Préférez la caméra arrière)';
+                    video.addEventListener('canplay', (ev) => {
+                        if (!streaming) {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            streaming = true;
+                            initializeTesseractWorker();
+                        }
+                    }, false);
                 } catch (frontErr) {
                     statusDiv.textContent = 'Erreur grave: Aucune caméra accessible. ' + frontErr.message;
                     console.error("Erreur d'accès à la caméra frontale: ", frontErr);
@@ -170,49 +189,127 @@
             }
         }
 
-        // Fonction pour valider le format du VIN
-        // C'est ici que la logique de validation "trop fiable" sera développée
-        function validateVIN(vin) {
-            // Un VIN est généralement composé de 17 caractères (lettres et chiffres)
-            // et n'utilise pas les lettres I, O, Q pour éviter la confusion.
-            const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/i; // Regex pour 17 caractères alphanumériques sans I, O, Q
-            
-            // Supprimer les espaces ou caractères non-VIN reconnus par OCR
-            const cleanedVin = vin.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
+        // Initialisation du worker Tesseract
+        async function initializeTesseractWorker() {
+            if (tesseractWorker) return; // Déjà initialisé
 
-            if (cleanedVin.length === 17 && vinRegex.test(cleanedVin)) {
-                // Ici, on pourrait ajouter une logique de checksum VIN si nécessaire
-                // Pour une fiabilité à 100%, une vérification du checksum est fortement recommandée.
-                // Exemple (très simplifié et ne couvre pas tous les standards)
-                // if (calculateVINChecksum(cleanedVin) === expectedChecksum) {
-                //     return cleanedVin;
-                // } else {
-                //     return null; // Checksum invalide
-                // }
-                return cleanedVin; // Retourne le VIN nettoyé si le format de base est bon
+            statusDiv.textContent = 'Chargement du moteur OCR... (peut prendre un moment)';
+            try {
+                tesseractWorker = await Tesseract.createWorker({
+                    // logger: m => console.log(m) // Décommentez pour voir la progression
+                });
+                // IMPORTANT : 'eng' est le modèle par défaut. Pour une fiabilité à 100%,
+                // vous DEVEZ entraîner un modèle personnalisé pour les VIN et le charger ici.
+                // Exemple : await tesseractWorker.loadLanguage('vin_model');
+                //           await tesseractWorker.initialize('vin_model');
+                await tesseractWorker.loadLanguage('eng');
+                await tesseractWorker.initialize('eng');
+                
+                // Limiter Tesseract aux caractères valides pour le VIN
+                await tesseractWorker.setParameters({
+                    tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ' // Exclut I, O, Q
+                });
+                statusDiv.textContent = 'Prêt à scanner le VIN. Cadrez-le et cliquez sur "Scanner".';
+            } catch (error) {
+                console.error("Erreur lors de l'initialisation de Tesseract: ", error);
+                statusDiv.textContent = 'Erreur: Impossible de charger le moteur OCR.';
             }
-            return null; // Format VIN invalide
         }
 
-        // Fonction de capture et traitement OCR
+
+        // --- 2. Logique de Validation du VIN ---
+        // Cette fonction est CRUCIALE pour la fiabilité.
+        // Elle valide le format et inclura le checksum pour le 100%.
+        function validateVIN(vin) {
+            // Nettoyer le VIN : supprimer les espaces, tabulations, caractères non alphanumériques, et le mettre en majuscules
+            const cleanedVin = vin.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+            // Un VIN valide a 17 caractères
+            if (cleanedVin.length !== 17) {
+                console.warn(`VIN non valide: longueur incorrecte (${cleanedVin.length} au lieu de 17)`);
+                return null;
+            }
+
+            // Caractères non autorisés dans un VIN (pour éviter les confusions)
+            const disallowedChars = /[IOQ]/;
+            if (disallowedChars.test(cleanedVin)) {
+                console.warn(`VIN non valide: contient des caractères non autorisés (I, O, Q)`);
+                return null;
+            }
+
+            // --- Implémentation du CHECKSUM VIN (Étape Cruciale pour 100% de Fiabilité) ---
+            // L'algorithme du checksum (9ème caractère) est complexe et basé sur des tables de conversion
+            // et des calculs spécifiques (poids, valeur). Le code ci-dessous est un PLACEHOLDER.
+            // Pour une fiabilité à 100%, il FAUT implémenter cet algorithme selon les normes ISO 3779/3780 ou SAE J853/J1892.
+            // Exemple d'un algorithme (conceptuel, non fonctionnel tel quel sans les tables de conversion):
+            /*
+            const weights = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2]; // Le 9ème est 0 pour le checksum
+            const charToValue = {
+                'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6, 'G': 7, 'H': 8, 'J': 1, 'K': 2,
+                'L': 3, 'M': 4, 'N': 5, 'P': 7, 'R': 9, 'S': 2, 'T': 3, 'U': 4, 'V': 5, 'W': 6,
+                'X': 7, 'Y': 8, 'Z': 9, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7,
+                '8': 8, '9': 9, '0': 0
+            };
+            let sum = 0;
+            for (let i = 0; i < 17; i++) {
+                const char = cleanedVin[i];
+                const value = charToValue[char];
+                if (value === undefined) { // Caractère inattendu, même si regex a déjà filtré
+                    console.warn(`VIN non valide: caractère inattendu à la position ${i}: ${char}`);
+                    return null;
+                }
+                if (i !== 8) { // Ne pas multiplier le 9ème caractère (checksum) par son poids
+                    sum += value * weights[i];
+                } else {
+                    sum += value; // Le 9ème caractère est juste ajouté ou validé après
+                }
+            }
+            const calculatedChecksum = sum % 11;
+            const expectedChecksumChar = cleanedVin[8];
+            let expectedChecksumValue;
+            if (expectedChecksumChar === 'X') {
+                expectedChecksumValue = 10;
+            } else if (expectedChecksumChar >= '0' && expectedChecksumChar <= '9') {
+                expectedChecksumValue = parseInt(expectedChecksumChar, 10);
+            } else {
+                console.warn(`VIN non valide: 9ème caractère (${expectedChecksumChar}) n'est ni chiffre ni 'X'`);
+                return null;
+            }
+
+            if (calculatedChecksum === expectedChecksumValue) {
+                console.log("Checksum VIN valide !");
+                return cleanedVin;
+            } else {
+                console.warn(`VIN non valide: Checksum incorrect. Attendu ${expectedChecksumValue}, Calculé ${calculatedChecksum}`);
+                return null;
+            }
+            */
+
+            // Pour l'instant, on se contente de la longueur et des caractères autorisés
+            return cleanedVin;
+        }
+
+        // --- 3. Capture et Traitement d'Image Avancé ---
         captureButton.addEventListener('click', async () => {
             if (!streaming) {
                 statusDiv.textContent = "La caméra n'est pas prête.";
                 return;
             }
+            if (!tesseractWorker) {
+                statusDiv.textContent = "Le moteur OCR n'est pas encore chargé. Veuillez patienter.";
+                return;
+            }
 
-            statusDiv.textContent = "Capture et analyse en cours...";
+            statusDiv.textContent = "Capture et analyse en cours... Veuillez patienter.";
             resultDiv.textContent = "VIN : Analyse en cours...";
+            resultDiv.style.color = '#0056B3'; // Couleur par défaut pendant l'analyse
 
-            // Dessiner l'image de la vidéo sur le canvas
-            // On peut cibler uniquement la zone du VINOverlay ici pour optimiser l'OCR
+            // Obtenir les dimensions de la zone du VIN pour la capture
             const overlay = document.getElementById('vinOverlay');
             const videoRect = video.getBoundingClientRect();
             const overlayRect = overlay.getBoundingClientRect();
 
-            // Calculer les coordonnées du VIN sur la vidéo
-            // Ces calculs sont approximatifs et dépendent du style CSS du overlay et de la taille de la vidéo
-            // Pour une précision absolue, il faut ajuster en fonction du rapport d'aspect de la vidéo et du canvas
+            // Calculer les coordonnées exactes du VIN sur la vidéo d'origine pour la capture
             const scaleX = canvas.width / videoRect.width;
             const scaleY = canvas.height / videoRect.height;
             
@@ -221,70 +318,57 @@
             const sWidth = overlayRect.width * scaleX;
             const sHeight = overlayRect.height * scaleY;
 
-            // Assurez-vous que les dimensions sont positives
-            if (sWidth <= 0 || sHeight <= 0) {
-                 statusDiv.textContent = "Erreur: Dimensions de l'overlay invalides pour la capture.";
-                 return;
-            }
-
-            // Dessiner uniquement la zone du VIN
+            // Dessiner la zone du VIN sur le canvas pour le traitement
             context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
 
-            // Obtenir les données de l'image du canvas
+            // Obtenir les données de l'image du canvas pour OpenCV
             const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
             let src = cv.matFromImageData(imageData); // Convertir en Mat OpenCV
 
-            // --- Début du prétraitement d'image avancé avec OpenCV.js ---
+            // --- Prétraitement d'image avec OpenCV.js ---
             let gray = new cv.Mat();
-            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0); // Convertir en niveaux de gris
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0); // 1. Convertir en niveaux de gris
 
-            // Application de l'égalisation d'histogramme adaptative (CLAHE)
-            // Utile pour améliorer le contraste dans des conditions de luminosité variées
+            // 2. Amélioration du contraste avec CLAHE (Contrast Limited Adaptive Histogram Equalization)
             let clahe = new cv.CLAHE(4, new cv.Size(8, 8)); // Clip limit 4, tile grid 8x8
             clahe.apply(gray, gray);
-            clahe.delete();
+            clahe.delete(); // Libérer la mémoire
 
-            // Amélioration du contraste et binarisation adaptative
-            // Ceci est une approche, d'autres peuvent être explorées (ex: seuillage de Niblack/Sauvola)
+            // 3. Suppression du bruit (filtre bilatéral pour préserver les bords)
+            let denoised = new cv.Mat();
+            cv.bilateralFilter(gray, denoised, 9, 75, 75, cv.BORDER_DEFAULT);
+            gray.delete();
+
+            // 4. Binarisation adaptative (cruciale pour les variations de luminosité)
+            // ADAPTIVE_THRESH_GAUSSIAN_C s'adapte mieux aux variations locales de lumière
             let binary = new cv.Mat();
-            cv.adaptiveThreshold(gray, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
+            // Paramètres : image_source, image_destination, valeur_max, type_adaptatif, type_seuil, taille_bloc, constante
+            cv.adaptiveThreshold(denoised, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
+            denoised.delete();
 
-            // Optionnel: Dilatation/Érosion pour nettoyer les caractères si besoin
-            // let kernel = cv.Mat.ones(2, 2, cv.CV_8U);
-            // cv.erode(binary, binary, kernel);
-            // cv.dilate(binary, binary, kernel);
-            // kernel.delete();
+            // 5. Opérations morphologiques (optionnel, pour nettoyer les caractères ou combler les lacunes)
+            // Utile si les caractères sont trop fins ou ont des coupures
+            let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(2, 2)); // Petit kernel
+            cv.morphologyEx(binary, binary, cv.MORPH_OPEN, kernel); // Ouverture: Érosion puis Dilatation (supprime petits points)
+            // cv.morphologyEx(binary, binary, cv.MORPH_CLOSE, kernel); // Fermeture: Dilatation puis Érosion (comble petits trous)
+            kernel.delete();
+            
+            // Pour le debug, vous pouvez afficher l'image traitée sur le canvas visible
+            // cv.imshow('canvas', binary); 
 
-            // Convertir la Mat OpenCV prétraitée en ImageData pour Tesseract.js
-            cv.imshow('canvas', binary); // Dessine la Mat prétraitée sur le canvas (visible ou non)
+            // Convertir la Mat OpenCV prétraitée en ImageData URL pour Tesseract.js
+            // Attention: Tesseract.js préfère souvent une image avec des contrastes bien marqués.
+            // Le résultat de la binarisation est idéal pour lui.
+            cv.imshow('canvas', binary); // Dessine la Mat prétraitée sur le canvas masqué
             const processedImageDataURL = canvas.toDataURL('image/png');
-            // --- Fin du prétraitement d'image ---
 
             src.delete();
-            gray.delete();
             binary.delete();
 
-            // Lancer l'OCR avec Tesseract.js
+            // --- 4. Lancement de l'OCR et Validation ---
             try {
-                // Nous allons entraîner un modèle personnalisé, mais pour le prototype, utilisons 'eng'
-                // Le chemin pour les données de langue personnalisées serait configuré ici:
-                // `langPath: '/path/to/custom/tessdata/'` ou `worker.loadLanguage('vin_model');`
-                const worker = await Tesseract.createWorker({
-                    // logger: m => console.log(m) // Pour voir la progression de l'OCR
-                });
-
-                await worker.loadLanguage('eng'); // Utilise le modèle anglais par défaut pour le prototype
-                await worker.initialize('eng');
-                
-                // Configurer Tesseract pour qu'il s'attende à des caractères spécifiques au VIN
-                // Ceci est crucial pour la fiabilité, à ajuster avec le modèle entraîné
-                await worker.setParameters({
-                    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPRSTUVWXYZ' // Exclut I, O, Q
-                });
-
-                const { data: { text } } = await worker.recognize(processedImageDataURL);
-
-                await worker.terminate();
+                // Utiliser le worker Tesseract déjà initialisé
+                const { data: { text } } = await tesseractWorker.recognize(processedImageDataURL);
 
                 const recognizedVIN = text.trim();
                 const validatedVIN = validateVIN(recognizedVIN);
@@ -294,9 +378,19 @@
                     resultDiv.style.color = '#2E8B57'; // Vert si valide
                     statusDiv.textContent = 'VIN reconnu et validé avec succès !';
                 } else {
-                    resultDiv.textContent = `VIN : ${recognizedVIN} (Non valide)`;
-                    resultDiv.style.color = '#E31937'; // Rouge si non valide
-                    statusDiv.textContent = 'VIN reconnu, mais le format est incorrect. Réessayez.';
+                    // Tenter une correction légère pour les erreurs courantes si le VIN n'est pas validé
+                    const correctedVIN = tryCorrectCommonOcrErrors(recognizedVIN);
+                    const reValidatedVIN = validateVIN(correctedVIN);
+
+                    if (reValidatedVIN) {
+                        resultDiv.textContent = `VIN : ${reValidatedVIN} (Corrigé)`;
+                        resultDiv.style.color = '#FFD700'; // Jaune si corrigé
+                        statusDiv.textContent = 'VIN reconnu et corrigé (vérifiez svp).';
+                    } else {
+                        resultDiv.textContent = `VIN : "${recognizedVIN}" (Non valide)`;
+                        resultDiv.style.color = '#E31937'; // Rouge si non valide
+                        statusDiv.textContent = 'VIN illisible ou format incorrect. Veuillez ré-ajuster et réessayer.';
+                    }
                 }
 
             } catch (ocrError) {
@@ -306,6 +400,24 @@
                 statusDiv.textContent = "Une erreur est survenue pendant l'analyse OCR.";
             }
         });
+
+        // Fonction pour tenter de corriger les erreurs OCR courantes (ex: 0 vs O, 1 vs I)
+        function tryCorrectCommonOcrErrors(vin) {
+            let corrected = vin;
+            // Exemple de corrections courantes (à affiner avec l'expérience et le jeu de données)
+            corrected = corrected.replace(/O/g, '0'); // Remplacer O par 0 (le VIN ne doit pas avoir O)
+            corrected = corrected.replace(/I/g, '1'); // Remplacer I par 1 (le VIN ne doit pas avoir I)
+            corrected = corrected.replace(/Q/g, '0'); // Remplacer Q par 0 (le VIN ne doit pas avoir Q)
+            corrected = corrected.replace(/S/g, '5'); // Correction fréquente S/5
+            corrected = corrected.replace(/Z/g, '2'); // Correction fréquente Z/2
+            corrected = corrected.replace(/B/g, '8'); // Correction fréquente B/8
+
+            // Enlever tout caractère qui n'est pas autorisé dans le VIN (le regex de validation le fait déjà, mais une pré-nette est bien)
+            corrected = corrected.replace(/[^0-9A-HJK-NPR-TV-Y]/g, ''); // Garder seulement les caractères valides pour le VIN
+
+            return corrected;
+        }
+
     </script>
 
     <script src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
