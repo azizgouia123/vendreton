@@ -57,18 +57,22 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
         }
         button {
-            background-color: #2E8B57; /* Vert Confiance */
+            background-color: #666; /* Gris par défaut (désactivé) */
             color: white;
             padding: 12px 25px;
             border: none;
             border-radius: 5px;
             font-size: 1.1em;
-            cursor: pointer;
+            cursor: not-allowed; /* Curseur "interdit" */
             transition: background-color 0.3s ease;
             margin-top: 10px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
-        button:hover {
+        button:enabled { /* Style quand le bouton est activé */
+            background-color: #2E8B57; /* Vert Confiance */
+            cursor: pointer;
+        }
+        button:enabled:hover {
             background-color: #267a4b;
         }
         #result {
@@ -106,7 +110,7 @@
         <div id="vinOverlay">Cadrez le VIN ici</div>
     </div>
 
-    <button id="captureButton">Scanner le VIN</button>
+    <button id="captureButton" disabled>Scanner le VIN</button>
     <p id="status">Chargement des ressources...</p>
 
     <div id="result">VIN : Non détecté</div>
@@ -124,6 +128,7 @@
         let streaming = false; // Indicateur de streaming vidéo
         let opencvReady = false; // Indicateur de disponibilité d'OpenCV
         let tesseractWorker = null; // Variable pour stocker le worker Tesseract
+        let tesseractReady = false; // Indicateur de disponibilité de Tesseract
 
         // --- 1. Initialisation des bibliothèques et de la caméra ---
 
@@ -153,7 +158,7 @@
                 });
                 video.srcObject = stream;
                 video.play();
-                statusDiv.textContent = 'Caméra active. Cadrez le VIN.';
+                statusDiv.textContent = 'Caméra active. Chargement du moteur OCR...';
 
                 video.addEventListener('canplay', (ev) => {
                     if (!streaming) {
@@ -173,7 +178,7 @@
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                     video.srcObject = stream;
                     video.play();
-                    statusDiv.textContent = 'Caméra frontale active. Cadrez le VIN. (Préférez la caméra arrière)';
+                    statusDiv.textContent = 'Caméra frontale active. Chargement du moteur OCR... (Préférez la caméra arrière)';
                     video.addEventListener('canplay', (ev) => {
                         if (!streaming) {
                             canvas.width = video.videoWidth;
@@ -193,10 +198,14 @@
         async function initializeTesseractWorker() {
             if (tesseractWorker) return; // Déjà initialisé
 
-            statusDiv.textContent = 'Chargement du moteur OCR... (peut prendre un moment)';
+            statusDiv.textContent = 'Chargement du moteur OCR... (patientez)';
             try {
                 tesseractWorker = await Tesseract.createWorker({
-                    // logger: m => console.log(m) // Décommentez pour voir la progression
+                    logger: m => { // Suivi de la progression du chargement
+                        if (m.status === 'downloading' || m.status === 'loading' || m.status === 'initializing') {
+                            statusDiv.textContent = `Moteur OCR: ${m.status} (${Math.round(m.progress * 100)}%)`;
+                        }
+                    }
                 });
                 // IMPORTANT : 'eng' est le modèle par défaut. Pour une fiabilité à 100%,
                 // vous DEVEZ entraîner un modèle personnalisé pour les VIN et le charger ici.
@@ -209,10 +218,14 @@
                 await tesseractWorker.setParameters({
                     tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ' // Exclut I, O, Q
                 });
+                tesseractReady = true; // Le moteur OCR est prêt !
+                captureButton.disabled = false; // Activer le bouton
                 statusDiv.textContent = 'Prêt à scanner le VIN. Cadrez-le et cliquez sur "Scanner".';
+
             } catch (error) {
                 console.error("Erreur lors de l'initialisation de Tesseract: ", error);
                 statusDiv.textContent = 'Erreur: Impossible de charger le moteur OCR.';
+                captureButton.disabled = true; // Garder le bouton désactivé en cas d'erreur
             }
         }
 
@@ -291,11 +304,12 @@
 
         // --- 3. Capture et Traitement d'Image Avancé ---
         captureButton.addEventListener('click', async () => {
+            // S'assurer que la caméra et Tesseract sont prêts avant de procéder
             if (!streaming) {
                 statusDiv.textContent = "La caméra n'est pas prête.";
                 return;
             }
-            if (!tesseractWorker) {
+            if (!tesseractReady) { // Utilise le nouvel indicateur
                 statusDiv.textContent = "Le moteur OCR n'est pas encore chargé. Veuillez patienter.";
                 return;
             }
@@ -303,6 +317,7 @@
             statusDiv.textContent = "Capture et analyse en cours... Veuillez patienter.";
             resultDiv.textContent = "VIN : Analyse en cours...";
             resultDiv.style.color = '#0056B3'; // Couleur par défaut pendant l'analyse
+            captureButton.disabled = true; // Désactiver le bouton pendant le traitement
 
             // Obtenir les dimensions de la zone du VIN pour la capture
             const overlay = document.getElementById('vinOverlay');
@@ -398,6 +413,8 @@
                 resultDiv.textContent = "VIN : Erreur lors de la reconnaissance.";
                 resultDiv.style.color = '#E31937';
                 statusDiv.textContent = "Une erreur est survenue pendant l'analyse OCR.";
+            } finally {
+                captureButton.disabled = false; // Réactiver le bouton après le traitement
             }
         });
 
