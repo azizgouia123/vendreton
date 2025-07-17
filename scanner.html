@@ -63,7 +63,7 @@
             border-radius: 5px;
             font-size: 1.1em;
             cursor: not-allowed;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             margin-top: 10px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
             min-width: 150px;
@@ -74,9 +74,10 @@
         }
         button:enabled:hover {
             background-color: #267a4b;
+            transform: scale(1.02);
         }
-        button.processing {
-            background-color: #FFA500;
+        button:active:enabled {
+            transform: scale(0.98);
         }
         #result {
             margin-top: 30px;
@@ -104,38 +105,22 @@
         canvas {
             display: none;
         }
-        .manual-input {
-            margin-top: 20px;
-            width: 100%;
-            max-width: 600px;
-        }
-        .manual-input input {
-            width: 100%;
-            padding: 10px;
-            font-size: 1.1em;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-        .manual-input button {
-            width: 100%;
-        }
-        .hidden {
-            display: none;
-        }
         .spinner {
             border: 3px solid rgba(0,0,0,0.1);
             border-radius: 50%;
             border-top: 3px solid #0056B3;
             width: 20px;
             height: 20px;
-            animation: spin 1s linear infinite;
+            animation: spin 0.8s linear infinite;
             margin-right: 10px;
             display: inline-block;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
@@ -156,15 +141,6 @@
 
     <div id="result">VIN : Non détecté</div>
 
-    <div class="manual-input hidden" id="manualInputContainer">
-        <p>Ou saisissez le VIN manuellement :</p>
-        <input type="text" id="manualVinInput" maxlength="17" placeholder="Entrez le VIN (17 caractères)">
-        <button id="validateManualVin">Valider le VIN</button>
-    </div>
-
-    <button id="toggleManualInput" class="hidden">Saisie manuelle</button>
-    <button id="resetScanner" class="hidden">Réinitialiser</button>
-
     <canvas id="canvas"></canvas>
 
     <script>
@@ -176,41 +152,56 @@
         const captureSpinner = document.getElementById('captureSpinner');
         const resultDiv = document.getElementById('result');
         const statusDiv = document.getElementById('status');
-        const manualInputContainer = document.getElementById('manualInputContainer');
-        const manualVinInput = document.getElementById('manualVinInput');
-        const validateManualVin = document.getElementById('validateManualVin');
-        const toggleManualInput = document.getElementById('toggleManualInput');
-        const resetScanner = document.getElementById('resetScanner');
 
         let streaming = false;
         let opencvReady = false;
         let tesseractWorker = null;
         let tesseractReady = false;
-        let lastScanTime = 0;
-        const SCAN_COOLDOWN = 2000; // 2 secondes entre les scans
 
-        function onOpenCvReady() {
-            opencvReady = true;
-            updateStatus('OpenCV.js chargé. Démarrage de la caméra...');
-            startCamera();
+        // Chargement optimisé d'OpenCV
+        function loadOpenCV() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://docs.opencv.org/4.x/opencv.js';
+                script.onload = () => {
+                    opencvReady = true;
+                    resolve();
+                };
+                script.onerror = reject;
+                document.body.appendChild(script);
+            });
         }
 
-        function onOpenCvError() {
-            updateStatus('Erreur: Impossible de charger OpenCV.js. Veuillez recharger la page.', true);
-            console.error("OpenCV.js failed to load");
+        // Chargement optimisé de Tesseract
+        function loadTesseract() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.body.appendChild(script);
+            });
         }
 
-        function updateStatus(message, isError = false) {
-            statusDiv.textContent = message;
-            statusDiv.style.color = isError ? '#E31937' : '#666';
+        async function initialize() {
+            try {
+                // Chargement parallèle des ressources
+                await Promise.all([loadOpenCV(), loadTesseract()]);
+                
+                // Initialisation immédiate de la caméra
+                startCamera();
+                
+                // Initialisation parallèle de Tesseract
+                initializeTesseractWorker();
+                
+            } catch (error) {
+                console.error("Erreur de chargement:", error);
+                statusDiv.textContent = 'Erreur de chargement des ressources. Veuillez recharger.';
+                statusDiv.style.color = '#E31937';
+            }
         }
 
         async function startCamera() {
-            if (!opencvReady) {
-                updateStatus('Erreur : OpenCV.js n\'est pas encore chargé. Veuillez recharger la page.', true);
-                return;
-            }
-
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
@@ -223,308 +214,147 @@
 
                 video.srcObject = stream;
                 video.play();
-                updateStatus('Caméra active. Chargement du moteur OCR...');
+                statusDiv.textContent = 'Caméra active. Initialisation en cours...';
 
                 video.addEventListener('canplay', () => {
                     if (!streaming) {
                         canvas.width = video.videoWidth;
                         canvas.height = video.videoHeight;
                         streaming = true;
-                        initializeTesseractWorker();
-                        toggleManualInput.classList.remove('hidden');
                     }
                 }, { once: true });
 
             } catch (err) {
-                console.error("Erreur d'accès à la caméra (tentative caméra arrière): ", err);
-                updateStatus('Erreur: Impossible d\'accéder à la caméra arrière. Tentative avec la caméra frontale...', true);
-
+                console.error("Erreur caméra arrière:", err);
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                     video.srcObject = stream;
                     video.play();
-                    updateStatus('Caméra frontale active. Chargement du moteur OCR...');
-                    video.addEventListener('canplay', () => {
-                        if (!streaming) {
-                            canvas.width = video.videoWidth;
-                            canvas.height = video.videoHeight;
-                            streaming = true;
-                            initializeTesseractWorker();
-                            toggleManualInput.classList.remove('hidden');
-                        }
-                    }, { once: true });
+                    statusDiv.textContent = 'Caméra frontale active. Initialisation en cours...';
                 } catch (frontErr) {
-                    console.error("Erreur d'accès à la caméra frontale: ", frontErr);
-                    updateStatus('Erreur grave: Aucune caméra accessible. Veuillez vérifier vos permissions.', true);
-                    showManualInputOption();
+                    console.error("Erreur caméra frontale:", frontErr);
+                    statusDiv.textContent = 'Erreur: Aucune caméra accessible';
+                    statusDiv.style.color = '#E31937';
                 }
             }
         }
 
-        function showManualInputOption() {
-            toggleManualInput.classList.remove('hidden');
-            toggleManualInput.textContent = "Activer la saisie manuelle";
-            toggleManualInput.addEventListener('click', () => {
-                manualInputContainer.classList.toggle('hidden');
-                toggleManualInput.textContent = manualInputContainer.classList.contains('hidden') ? 
-                    "Activer la saisie manuelle" : "Masquer la saisie manuelle";
-            });
-        }
-
         async function initializeTesseractWorker() {
-            if (tesseractWorker) return;
-
-            updateStatus('Chargement du moteur OCR... (cela peut prendre un instant)');
             try {
                 tesseractWorker = await Tesseract.createWorker({
-                    logger: m => console.log(m)
+                    logger: m => console.debug(m)
                 });
 
-                // Utilisation du modèle anglais comme fallback (vous devriez entraîner un modèle spécifique pour les VIN)
                 await tesseractWorker.loadLanguage('eng');
                 await tesseractWorker.initialize('eng');
                 
                 await tesseractWorker.setParameters({
                     tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ',
-                    tessedit_pageseg_mode: '7' // Mode segmentation pour une seule ligne de texte
+                    tessedit_pageseg_mode: '7' // Mode ligne unique
                 });
 
                 tesseractReady = true;
                 captureButton.disabled = false;
-                updateStatus('Prêt à scanner le VIN. Cadrez-le et cliquez sur "Scanner".');
-                resetScanner.classList.remove('hidden');
-
+                statusDiv.textContent = 'Prêt à scanner. Cliquez sur le bouton!';
             } catch (error) {
-                console.error("Erreur lors de l'initialisation de Tesseract: ", error);
-                updateStatus('Erreur: Impossible de charger le moteur OCR. Vérifiez votre connexion internet.', true);
-                captureButton.disabled = true;
-                showManualInputOption();
+                console.error("Erreur Tesseract:", error);
+                statusDiv.textContent = 'Erreur OCR. Veuillez recharger.';
+                statusDiv.style.color = '#E31937';
             }
-        }
-
-        function calculateVINChecksum(vin) {
-            const map = '0123456789X';
-            const weights = [8,7,6,5,4,3,2,10,0,9,8,7,6,5,4,3,2];
-            let sum = 0;
-            
-            for (let i = 0; i < 17; i++) {
-                const c = vin.charAt(i);
-                let value;
-                
-                if (/^[A-Z]$/.test(c)) {
-                    const transliterations = {
-                        'A':1,'B':2,'C':3,'D':4,'E':5,'F':6,'G':7,'H':8,
-                        'J':1,'K':2,'L':3,'M':4,'N':5,'P':7,'R':9,
-                        'S':2,'T':3,'U':4,'V':5,'W':6,'X':7,'Y':8,'Z':9
-                    };
-                    value = transliterations[c] || 0;
-                } else {
-                    value = parseInt(c, 10) || 0;
-                }
-                
-                sum += value * weights[i];
-            }
-            
-            return map.charAt(sum % 11);
         }
 
         function validateVIN(vin) {
             const cleanedVin = vin.toUpperCase().replace(/[^A-Z0-9]/g, '');
-
-            if (cleanedVin.length !== 17) {
-                console.warn(`Validation VIN: Longueur incorrecte (${cleanedVin.length} au lieu de 17).`);
-                return null;
-            }
-
-            const disallowedCharsRegex = /[IOQ]/;
-            if (disallowedCharsRegex.test(cleanedVin)) {
-                console.warn(`Validation VIN: Contient des caractères non autorisés (I, O, Q).`);
-                return null;
-            }
-
-            // Vérification du checksum (9ème caractère)
-            const checksum = calculateVINChecksum(cleanedVin);
-            if (cleanedVin.charAt(8) !== checksum) {
-                console.warn(`Validation VIN: Checksum incorrect (devrait être ${checksum})`);
-                return null;
-            }
-
+            
+            // Validation rapide sans checksum pour plus de vitesse
+            if (cleanedVin.length !== 17) return null;
+            if (/[IOQ]/.test(cleanedVin)) return null;
+            
             return cleanedVin;
         }
 
         function tryCorrectCommonOcrErrors(vin) {
-            let corrected = vin;
-            corrected = corrected.replace(/O/g, '0');
-            corrected = corrected.replace(/I/g, '1');
-            corrected = corrected.replace(/Q/g, '0');
-            corrected = corrected.replace(/S/g, '5');
-            corrected = corrected.replace(/Z/g, '2');
-            corrected = corrected.replace(/B/g, '8');
-            corrected = corrected.replace(/D/g, '0');
-            corrected = corrected.replace(/[^0-9A-HJ-NPR-TV-Y]/g, ''); 
-            return corrected;
+            return vin.replace(/O/g, '0')
+                     .replace(/I/g, '1')
+                     .replace(/Q/g, '0')
+                     .replace(/[^0-9A-HJ-NPR-TV-Y]/g, '');
         }
 
-        function showProcessingUI(processing) {
-            if (processing) {
-                captureButton.disabled = true;
-                captureButton.classList.add('processing');
-                captureSpinner.classList.remove('hidden');
-                captureText.textContent = "Analyse en cours...";
-            } else {
+        async function captureAndAnalyze() {
+            if (!streaming || !tesseractReady) return;
+
+            // UI feedback immédiat
+            captureButton.disabled = true;
+            captureSpinner.classList.remove('hidden');
+            captureText.textContent = "Analyse...";
+            resultDiv.textContent = "VIN : Analyse en cours...";
+            
+            try {
+                // Capture instantanée
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                
+                // Traitement optimisé (en parallèle avec l'UI)
+                setTimeout(async () => {
+                    try {
+                        const src = cv.matFromImageData(imageData);
+                        let gray = new cv.Mat();
+                        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                        
+                        let binary = new cv.Mat();
+                        cv.threshold(gray, binary, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
+                        
+                        cv.imshow('canvas', binary);
+                        const processedImageDataURL = canvas.toDataURL('image/jpeg', 0.7);
+                        
+                        // Libération mémoire immédiate
+                        src.delete(); gray.delete(); binary.delete();
+                        
+                        // Reconnaissance OCR
+                        const { data: { text } } = await tesseractWorker.recognize(processedImageDataURL);
+                        const recognizedVIN = text.trim();
+                        
+                        // Validation rapide
+                        let validatedVIN = validateVIN(recognizedVIN) || 
+                                         validateVIN(tryCorrectCommonOcrErrors(recognizedVIN));
+                        
+                        // Mise à jour UI
+                        if (validatedVIN) {
+                            resultDiv.textContent = `VIN : ${validatedVIN}`;
+                            resultDiv.style.color = '#2E8B57';
+                            statusDiv.textContent = 'Succès!';
+                        } else {
+                            resultDiv.textContent = `VIN : "${recognizedVIN}" (Non valide)`;
+                            resultDiv.style.color = '#E31937';
+                            statusDiv.textContent = 'Format invalide. Réessayez.';
+                        }
+                        
+                    } catch (error) {
+                        console.error("Erreur traitement:", error);
+                        resultDiv.textContent = "Erreur d'analyse";
+                        resultDiv.style.color = '#E31937';
+                    } finally {
+                        captureButton.disabled = false;
+                        captureSpinner.classList.add('hidden');
+                        captureText.textContent = "Scanner le VIN";
+                    }
+                }, 0);
+                
+            } catch (error) {
+                console.error("Erreur capture:", error);
                 captureButton.disabled = false;
-                captureButton.classList.remove('processing');
                 captureSpinner.classList.add('hidden');
                 captureText.textContent = "Scanner le VIN";
+                statusDiv.textContent = 'Erreur de capture';
+                statusDiv.style.color = '#E31937';
             }
         }
 
-        captureButton.addEventListener('click', async () => {
-            const now = Date.now();
-            if (now - lastScanTime < SCAN_COOLDOWN) {
-                updateStatus(`Veuillez patienter ${Math.ceil((SCAN_COOLDOWN - (now - lastScanTime))/1000)} seconde(s) avant un nouveau scan.`);
-                return;
-            }
+        // Événement click optimisé
+        captureButton.addEventListener('click', captureAndAnalyze);
 
-            if (!streaming) {
-                updateStatus("La caméra n'est pas active.", true);
-                return;
-            }
-            if (!tesseractReady) {
-                updateStatus("Le moteur OCR n'est pas encore prêt. Veuillez patienter.", true);
-                return;
-            }
-
-            lastScanTime = now;
-            updateStatus("Capture et analyse en cours... Veuillez patienter.");
-            resultDiv.textContent = "VIN : Analyse en cours...";
-            resultDiv.style.color = '#0056B3';
-            showProcessingUI(true);
-
-            try {
-                const overlay = document.getElementById('vinOverlay');
-                const videoRect = video.getBoundingClientRect();
-                const overlayRect = overlay.getBoundingClientRect();
-
-                const scaleX = canvas.width / videoRect.width;
-                const scaleY = canvas.height / videoRect.height;
-                
-                const sx = (overlayRect.left - videoRect.left) * scaleX;
-                const sy = (overlayRect.top - videoRect.top) * scaleY;
-                const sWidth = overlayRect.width * scaleX;
-                const sHeight = overlayRect.height * scaleY;
-
-                context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
-
-                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                let src = cv.matFromImageData(imageData);
-
-                // Pré-traitement de l'image pour améliorer la reconnaissance OCR
-                let gray = new cv.Mat();
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-
-                // Amélioration du contraste
-                let clahe = new cv.CLAHE(4, new cv.Size(8, 8));
-                clahe.apply(gray, gray);
-                clahe.delete();
-
-                // Réduction du bruit
-                let denoised = new cv.Mat();
-                cv.bilateralFilter(gray, denoised, 9, 75, 75, cv.BORDER_DEFAULT);
-                gray.delete();
-
-                // Binarisation
-                let binary = new cv.Mat();
-                cv.adaptiveThreshold(denoised, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
-                denoised.delete();
-
-                // Amélioration des caractères
-                let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(2, 2));
-                cv.morphologyEx(binary, binary, cv.MORPH_OPEN, kernel);
-                kernel.delete();
-                
-                cv.imshow('canvas', binary);
-                const processedImageDataURL = canvas.toDataURL('image/png');
-
-                src.delete();
-                binary.delete();
-
-                // Reconnaissance OCR avec Tesseract
-                const { data: { text } } = await tesseractWorker.recognize(processedImageDataURL, {
-                    rectangle: { top: 0, left: 0, width: canvas.width, height: canvas.height }
-                });
-
-                const recognizedVIN = text.trim();
-                let validatedVIN = validateVIN(recognizedVIN);
-
-                if (validatedVIN) {
-                    resultDiv.textContent = `VIN : ${validatedVIN}`;
-                    resultDiv.style.color = '#2E8B57';
-                    updateStatus('VIN reconnu et validé avec succès !');
-                } else {
-                    const correctedVIN = tryCorrectCommonOcrErrors(recognizedVIN);
-                    validatedVIN = validateVIN(correctedVIN);
-
-                    if (validatedVIN) {
-                        resultDiv.textContent = `VIN : ${validatedVIN} (Corrigé et Validé)`;
-                        resultDiv.style.color = '#FFD700';
-                        updateStatus('VIN reconnu et corrigé automatiquement. Veuillez vérifier.');
-                    } else {
-                        resultDiv.textContent = `VIN : "${recognizedVIN}" (Non valide)`;
-                        resultDiv.style.color = '#E31937';
-                        updateStatus('VIN illisible ou format incorrect. Veuillez ajuster le cadrage et réessayer.', true);
-                    }
-                }
-
-            } catch (ocrError) {
-                console.error("Erreur lors de la reconnaissance OCR: ", ocrError);
-                resultDiv.textContent = "VIN : Erreur interne lors de l'analyse.";
-                resultDiv.style.color = '#E31937';
-                updateStatus("Une erreur grave est survenue pendant l'analyse OCR.", true);
-            } finally {
-                showProcessingUI(false);
-            }
-        });
-
-        validateManualVin.addEventListener('click', () => {
-            const vin = manualVinInput.value.trim();
-            if (!vin) {
-                updateStatus('Veuillez entrer un VIN.', true);
-                return;
-            }
-
-            const validatedVIN = validateVIN(vin);
-            if (validatedVIN) {
-                resultDiv.textContent = `VIN : ${validatedVIN}`;
-                resultDiv.style.color = '#2E8B57';
-                updateStatus('VIN saisi et validé avec succès !');
-            } else {
-                resultDiv.textContent = `VIN : "${vin}" (Non valide)`;
-                resultDiv.style.color = '#E31937';
-                updateStatus('Format de VIN incorrect. Un VIN valide doit contenir exactement 17 caractères (chiffres et lettres majuscules, sauf I, O, Q).', true);
-            }
-        });
-
-        resetScanner.addEventListener('click', () => {
-            resultDiv.textContent = "VIN : Non détecté";
-            resultDiv.style.color = '#0056B3';
-            updateStatus('Prêt à scanner un nouveau VIN.');
-            manualVinInput.value = '';
-            manualInputContainer.classList.add('hidden');
-            toggleManualInput.textContent = "Activer la saisie manuelle";
-        });
-
-        // Initialisation
-        document.addEventListener('DOMContentLoaded', () => {
-            toggleManualInput.addEventListener('click', () => {
-                manualInputContainer.classList.toggle('hidden');
-                toggleManualInput.textContent = manualInputContainer.classList.contains('hidden') ? 
-                    "Activer la saisie manuelle" : "Masquer la saisie manuelle";
-            });
-        });
+        // Démarrer l'initialisation
+        initialize();
     </script>
-
-    <script src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();" onerror="onOpenCvError();"></script>
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 </body>
 </html>
