@@ -1,152 +1,78 @@
 <!DOCTYPE html>
-<html lang="fr-CA">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner VIN Instantané | VendreTonAutoRapide.ca</title>
-    <!-- Préchargement des ressources critiques -->
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" as="script">
-    <link rel="preload" href="https://docs.opencv.org/4.x/opencv.js" as="script">
+    <title>Scanner VIN Instantané - VendreTonAutoRapide.ca</title>
     <style>
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f5f7fa;
-            color: #333;
-            text-align: center;
-        }
-        #scanner-container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        #camera-feed {
-            width: 100%;
-            background: #000;
-            border-radius: 8px;
-            aspect-ratio: 16/9;
-        }
-        #scan-btn {
-            background: #2E8B57;
-            color: white;
-            border: none;
-            padding: 14px 28px;
-            font-size: 1.1em;
-            border-radius: 8px;
-            margin: 20px 0;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        #scan-btn:active {
-            transform: scale(0.96);
-        }
-        #result {
-            padding: 15px;
-            background: #e8f4fc;
-            border-radius: 8px;
-            font-size: 1.2em;
-            margin-top: 20px;
-            min-height: 60px;
-        }
-        .highlight {
-            color: #2E8B57;
-            font-weight: bold;
-        }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #camera { width: 100%; max-width: 600px; background: #000; border-radius: 8px; }
+        #scan-btn { background: #E31937; color: white; border: none; padding: 15px 30px; font-size: 1.2em; border-radius: 8px; cursor: pointer; margin: 20px 0; }
+        #result { font-size: 1.3em; font-weight: bold; margin-top: 20px; padding: 15px; border-radius: 8px; }
+        .valid { background: #e6f7ff; color: #2E8B57; }
+        .invalid { background: #ffebee; color: #E31937; }
     </style>
 </head>
 <body>
-    <div id="scanner-container">
-        <h1>Scanner VIN Instantané</h1>
-        <video id="camera-feed" playsinline autoplay muted></video>
-        <button id="scan-btn">Scanner Maintenant</button>
-        <div id="result">Prêt à scanner</div>
-    </div>
+    <h1>SCANNEZ VOTRE VIN EN 2 SECONDES</h1>
+    <video id="camera" playsinline autoplay muted></video>
+    <button id="scan-btn">LANCER LE SCAN</button>
+    <div id="result">Prêt à scanner</div>
 
     <script>
-        // Solution hybride ultra-optimisée
-        document.addEventListener('DOMContentLoaded', async () => {
-            const video = document.getElementById('camera-feed');
-            const scanBtn = document.getElementById('scan-btn');
-            const result = document.getElementById('result');
+        // 1. Démarrer la caméra IMMÉDIATEMENT
+        const video = document.getElementById('camera');
+        const scanBtn = document.getElementById('scan-btn');
+        const resultDiv = document.getElementById('result');
+        
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => video.srcObject = stream)
+            .catch(() => navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => video.srcObject = stream)
+                .catch(err => resultDiv.textContent = "ERREUR: Caméra bloquée")
+            );
+
+        // 2. Solution OCR Réelle avec Tesseract.js
+        scanBtn.addEventListener('click', async () => {
+            resultDiv.textContent = "Analyse en cours...";
             
-            // 1. Démarrer la caméra immédiatement en arrière-plan
-            let cameraStream = null;
-            const initCamera = async () => {
-                try {
-                    cameraStream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            facingMode: 'environment',
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
-                        }
-                    });
-                    video.srcObject = cameraStream;
-                } catch (err) {
-                    console.log("Utilisation de la caméra frontale");
-                    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    video.srcObject = cameraStream;
-                }
-            };
+            // Capture de l'image
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
             
-            // Démarrer sans attendre
-            initCamera();
-            
-            // 2. Solution de repli instantanée (OCR léger)
-            scanBtn.addEventListener('click', async () => {
-                if (!cameraStream) {
-                    result.textContent = "Initialisation en cours...";
-                    await initCamera();
-                }
-                
-                // Capture instantanée
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0);
-                
-                // Simulation immédiate (remplacer par votre logique OCR)
-                simulateVinDetection(canvas);
-            });
-            
-            // 3. Simulation de détection (à remplacer par votre implémentation réelle)
-            function simulateVinDetection(canvas) {
-                result.innerHTML = "Analyse en cours... <small>(simulation)</small>";
-                
-                // Simulation de délai variable (0-1s)
-                setTimeout(() => {
-                    const fakeVins = [
-                        "1HGCM82633A123456", 
-                        "JTDKN3DU0D1234567",
-                        "5XYZU3LBXFG123456"
-                    ];
-                    const randomVin = fakeVins[Math.floor(Math.random() * fakeVins.length)];
-                    result.innerHTML = `VIN détecté: <span class="highlight">${randomVin}</span>`;
-                    
-                    // Afficher la capture pour validation
-                    result.innerHTML += `<div style="margin-top:15px;">
-                        <img src="${canvas.toDataURL('image/jpeg', 0.7)}" width="200" style="border-radius:4px;">
-                        <p><small>Vérifiez que le VIN est lisible</small></p>
-                    </div>`;
-                }, Math.random() * 1000);
+            // Chargement DYNAMIQUE de Tesseract (seulement au premier clic)
+            if (!window.Tesseract) {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+                document.head.appendChild(script);
+                await new Promise(resolve => script.onload = resolve);
             }
             
-            // 4. Chargement progressif des ressources lourdes
-            window.addEventListener('load', () => {
-                // Charger Tesseract en arrière-plan
-                const tesseractScript = document.createElement('script');
-                tesseractScript.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-                document.head.appendChild(tesseractScript);
-                
-                // Charger OpenCV en arrière-plan
-                const opencvScript = document.createElement('script');
-                opencvScript.src = 'https://docs.opencv.org/4.x/opencv.js';
-                opencvScript.onload = () => {
-                    console.log("OpenCV prêt en arrière-plan");
-                };
-                document.head.appendChild(opencvScript);
+            // Détection RÉELLE du VIN
+            const worker = await Tesseract.createWorker();
+            await worker.loadLanguage('eng');
+            await worker.initialize('eng');
+            await worker.setParameters({
+                tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ',
+                tessedit_pageseg_mode: '7'
             });
+            
+            const { data: { text } } = await worker.recognize(canvas);
+            const vin = cleanVin(text);
+            
+            resultDiv.textContent = vin ? `VIN DÉTECTÉ: ${vin}` : "VIN NON RECONNU";
+            resultDiv.className = vin ? 'valid' : 'invalid';
+            
+            worker.terminate();
         });
+        
+        // Nettoyage du VIN
+        function cleanVin(text) {
+            const vin = text.replace(/[\s\W]/g, '').toUpperCase();
+            return vin.length === 17 && !/[IOQ]/.test(vin) ? vin : null;
+        }
     </script>
 </body>
 </html>
