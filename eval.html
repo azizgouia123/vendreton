@@ -54,7 +54,7 @@
 
         /* Hero Évaluation */
         .eval-hero {
-            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('1.png');
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://via.placeholder.com/1920x600/333333/ffffff?text=Image+de+Fond+Véhicule'); /* Placeholder image */
             background-size: cover;
             background-position: center;
             color: white;
@@ -616,7 +616,7 @@
                         <p>Année: <strong id="decodedAnnee">N/A</strong></p>
                         <p>Carburant: <strong id="decodedCarburant">N/A</strong></p>
                         <p>Transmission: <strong id="decodedTransmission">N/A</strong></p>
-                        <p style="color: var(--gray); font-size: 13px; margin-top: 10px;">Veuillez vérifier et compléter les champs du formulaire avec les informations décodées.</p>
+                        <p style="color: var(--gray); font-size: 13px; margin-top: 10px;">Veuillez vérifier et compléter les champs du formulaire avec les informations décodées. Si les champs ne sont pas remplis, le VIN n'a pas pu être décodé ou n'est pas supporté par l'API.</p>
                     </div>
 
                     <div class="form-group">
@@ -652,12 +652,6 @@
                         <label for="annee">Année</label>
                         <select id="annee" class="form-control" required>
                             <option value="">Sélectionnez l'année</option>
-                            <script>
-                                const currentYear = new Date().getFullYear();
-                                for (let year = currentYear; year >= 1990; year--) {
-                                    document.write(`<option value="${year}">${year}</option>`);
-                                }
-                            </script>
                         </select>
                     </div>
 
@@ -719,7 +713,7 @@
 
                         <div class="photo-tabs">
                             <button class="photo-tab active" data-tab="exterieur"><i class="fas fa-car"></i> Extérieur</button>
-                            <button class="photo-tab" data-tab="interieur"><i class="fas fa-tachometer-alt"></i> Intérieur</button>
+                            <button class="photo-tab" data-tab="interieur"><i class="fas fa-steering-wheel"></i> Intérieur</button>
                             <button class="photo-tab" data-tab="dommages"><i class="fas fa-exclamation-triangle"></i> Dommages</button>
                         </div>
 
@@ -729,28 +723,28 @@
                                 <p>Veuillez prendre des photos claires de tous les angles de votre véhicule.</p>
                                 <div class="photo-examples-grid">
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Avant%203/4');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?text=Avant 3/4');"></div>
                                         <div class="photo-details">
                                             <h5>Avant 3/4</h5>
                                             <p>Montrant l'avant et le côté.</p>
                                         </div>
                                     </div>
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Arrière%203/4');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?text=Arrière 3/4');"></div>
                                         <div class="photo-details">
                                             <h5>Arrière 3/4</h5>
                                             <p>Montrant l'arrière et le côté.</p>
                                         </div>
                                     </div>
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Côté%20(Droit)');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?text=Côté Droit');"></div>
                                         <div class="photo-details">
                                             <h5>Côté (Droit)</h5>
                                             <p>Vue latérale complète.</p>
                                         </div>
                                     </div>
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Côté%20(Gauche)');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?text=Côté Gauche');"></div>
                                         <div class="photo-details">
                                             <h5>Côté (Gauche)</h5>
                                             <p>Autre vue latérale complète.</p>
@@ -775,28 +769,28 @@
                                 <p>Veuillez prendre des photos claires du tableau de bord, des sièges avant et arrière.</p>
                                 <div class="photo-examples-grid">
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Tableau%20de%20bord');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?text=Tableau de bord');"></div>
                                         <div class="photo-details">
                                             <h5>Tableau de bord</h5>
                                             <p>Vue complète du tableau de bord.</p>
                                         </div>
                                     </div>
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Sièges%20Avant');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?text=Sièges Avant');"></div>
                                         <div class="photo-details">
                                             <h5>Sièges Avant</h5>
                                             <p>Les deux sièges avant en entier.</p>
                                         </div>
                                     </div>
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Sièges%20Arrière');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?text=Sièges Arrière');"></div>
                                         <div class="photo-details">
                                             <h5>Sièges Arrière</h5>
                                             <p>La banquette arrière en entier.</p>
                                         </div>
                                     </div>
                                     <div class="photo-example-card">
-                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?Text=Odomètre');"></div>
+                                        <div class="photo-thumbnail" style="background-image: url('https://via.placeholder.com/150/cccccc/ffffff?text=Odomètre');"></div>
                                         <div class="photo-details">
                                             <h5>Odomètre</h5>
                                             <p>Lecture claire du kilométrage.</p>
@@ -832,109 +826,439 @@
                         </div>
                     </div>
 
-                    <div class="full-width">
-                        <h3>Vos coordonnées</h3>
-                        <p>Veuillez fournir vos informations pour que nous puissions vous contacter.</p>
+                    <div class="full-width" style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 30px;">
+                        <h3 style="text-align: center; margin-bottom: 20px; color: var(--primary);">Vos Coordonnées</h3>
+                        <p style="text-align: center; color: var(--gray); margin-bottom: 30px;">Veuillez nous fournir vos informations de contact pour recevoir l'évaluation.</p>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="nom">Nom Complet</label>
+                                <input type="text" id="nom" class="form-control" placeholder="Votre nom" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="courriel">Courriel</label>
+                                <input type="email" id="courriel" class="form-control" placeholder="votre.courriel@exemple.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="telephone">Numéro de Téléphone</label>
+                                <input type="tel" id="telephone" class="form-control" placeholder="123-456-7890" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="ville">Ville</label>
+                                <input type="text" id="ville" class="form-control" placeholder="Ex: Repentigny" required>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="nom">Nom complet</label>
-                        <input type="text" id="nom" class="form-control" required>
+                    <div class="form-group full-width" style="margin-top: 30px;">
+                        <button type="submit" class="btn btn-block">Soumettre et Obtenir l'Évaluation</button>
+                        <button type="button" id="generatePdfBtn" class="btn btn-block" style="background-color: var(--primary); margin-top: 15px;">Générer le PDF de l'Évaluation</button>
                     </div>
-
-                    <div class="form-group">
-                        <label for="telephone">Numéro de téléphone</label>
-                        <input type="tel" id="telephone" class="form-control" placeholder="Ex: 514-123-4567" required>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label for="courriel">Adresse courriel</label>
-                        <input type="email" id="courriel" class="form-control" required>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label for="commentaires">Commentaires additionnels (facultatif)</label>
-                        <textarea id="commentaires" class="form-control" rows="4" placeholder="Informations supplémentaires sur votre véhicule"></textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-block">Générer l'évaluation PDF</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <footer style="text-align: center; padding: 30px 0; color: var(--gray); font-size: 14px;">
-        <div class="container">
-            <p>&copy; 2025 VendreTonAutoRapide.ca. Tous droits réservés.</p>
-            <p>Montréal, Québec</p>
-        </div>
-    </footer>
-
     <script>
-        // Gérer le retour du scan
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const scannedVin = urlParams.get('scannedVin');
-            
-            if (scannedVin) {
-                document.getElementById('vin').value = scannedVin;
-                document.getElementById('decodeVinBtn').click();
-                
-                // Nettoyer l'URL
-                const cleanUrl = window.location.href.split('?')[0];
-                window.history.replaceState({}, document.title, cleanUrl);
+        // Tab functionality for photo upload
+        document.querySelectorAll('.photo-tab').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.photo-tab').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.photo-tab-content').forEach(content => content.classList.remove('active'));
+
+                button.classList.add('active');
+                document.getElementById(button.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Dynamic Year for 'annee' select
+        const anneeSelect = document.getElementById('annee');
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear; year >= 1990; year--) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            anneeSelect.appendChild(option);
+        }
+
+        // --- DÉCODEUR VIN RÉEL (API NHTSA - CÔTÉ CLIENT) ---
+        // ATTENTION : Cette API est principalement pour les véhicules nord-américains et est limitée.
+        // Pour une solution complète et fiable, un backend est recommandé.
+        document.getElementById('decodeVinBtn').addEventListener('click', async () => {
+            const vinInput = document.getElementById('vin').value.trim(); // Trim pour enlever les espaces
+            const vinResultsDiv = document.getElementById('vin-decoder-results');
+            vinResultsDiv.style.display = 'none'; // Cacher les résultats précédents
+
+            // Réinitialiser les champs affichés
+            document.getElementById('decodedMarque').textContent = 'N/A';
+            document.getElementById('decodedModele').textContent = 'N/A';
+            // CORRECTION ICI: document.getElementById au lieu de document()
+            document.getElementById('decodedAnnee').textContent = 'N/A';
+            document.getElementById('decodedCarburant').textContent = 'N/A';
+            document.getElementById('decodedTransmission').textContent = 'N/A';
+
+            // Réinitialiser les champs du formulaire pré-remplis
+            document.getElementById('marque').value = '';
+            document.getElementById('modele').value = '';
+            document.getElementById('annee').value = '';
+            document.getElementById('carburant').value = '';
+            document.getElementById('transmission').value = '';
+
+
+            if (vinInput.length === 17) {
+                try {
+                    const apiUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${vinInput}?format=json`;
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+
+                    if (data && data.Results && data.Results.length > 0) {
+                        const decodedVehicle = data.Results[0]; // Prend le premier résultat
+
+                        // Fonction utilitaire pour obtenir une valeur et retourner 'N/A' si vide/null
+                        const getValue = (val) => (val && val !== "null" && val !== "") ? val : 'N/A';
+
+                        // Normalisation et affichage de la Marque
+                        let marque = getValue(decodedVehicle.Make);
+                        if (marque !== 'N/A') {
+                            marque = marque.charAt(0).toUpperCase() + marque.slice(1).toLowerCase();
+                        }
+                        document.getElementById('decodedMarque').textContent = marque;
+
+                        // Normalisation et affichage du Modèle (juste la première lettre en majuscule)
+                        let modele = getValue(decodedVehicle.Model);
+                        if (modele !== 'N/A') {
+                            modele = modele.charAt(0).toUpperCase() + modele.slice(1).toLowerCase();
+                        }
+                        document.getElementById('decodedModele').textContent = modele;
+
+                        // Affichage de l'Année
+                        const annee = getValue(decodedVehicle.ModelYear);
+                        document.getElementById('decodedAnnee').textContent = annee;
+
+                        // Normalisation et affichage du Carburant
+                        let carburant = getValue(decodedVehicle.FuelTypePrimary || decodedVehicle.FuelType);
+                        const carburantMap = {
+                            "GASOLINE": "Essence",
+                            "DIESEL": "Diesel",
+                            "ELECTRIC": "Électrique",
+                            "HYBRID": "Hybride",
+                            "FLEXIBLE": "Essence/Éthanol",
+                            "ETHANOL": "Éthanol",
+                            "CNG": "GNV", // Gaz Naturel Véhicule
+                            "LPG": "GPL"  // Gaz de Pétrole Liquéfié
+                        };
+                        carburant = carburantMap[carburant.toUpperCase()] || carburant; // Traduit ou garde l'original si non trouvé
+                        document.getElementById('decodedCarburant').textContent = carburant;
+
+                        // Normalisation et affichage de la Transmission
+                        let transmission = getValue(decodedVehicle.TransmissionStyle || decodedVehicle.Transmission);
+                        const transmissionMap = {
+                            "AUTOMATIC": "Automatique",
+                            "MANUAL": "Manuelle",
+                            "SEMI-AUTOMATIC": "Semi-automatique",
+                            "CVT": "CVT",
+                            "AUTOMATED MANUAL": "Manuelle Automatisée"
+                        };
+                        transmission = transmissionMap[transmission.toUpperCase()] || transmission; // Traduit ou garde l'original si non trouvé
+                        document.getElementById('decodedTransmission').textContent = transmission;
+
+                        // Pré-remplir les champs du formulaire si les données sont valides et non vides
+                        if (marque !== 'N/A') {
+                            // Vérifier si l'option de la marque existe, sinon l'ajouter pour la pré-sélection
+                            let optionExists = Array.from(document.getElementById('marque').options).some(opt => opt.value.toLowerCase() === marque.toLowerCase());
+                            if (!optionExists && marque !== 'N/A') {
+                                let newOption = new Option(marque, marque);
+                                document.getElementById('marque').add(newOption);
+                            }
+                            document.getElementById('marque').value = marque;
+                        }
+                        if (modele !== 'N/A') document.getElementById('modele').value = modele;
+                        if (annee !== 'N/A') document.getElementById('annee').value = annee;
+                        
+                        if (carburant !== 'N/A') {
+                            // Vérifier si l'option existe déjà dans le select, sinon l'ajouter (pour les cas non standards)
+                            let optionExists = Array.from(document.getElementById('carburant').options).some(opt => opt.value.toLowerCase() === carburant.toLowerCase());
+                            if (!optionExists && carburant !== 'N/A') {
+                                let newOption = new Option(carburant, carburant);
+                                document.getElementById('carburant').add(newOption);
+                            }
+                            document.getElementById('carburant').value = carburant;
+                        }
+
+                        if (transmission !== 'N/A') {
+                             // Vérifier si l'option existe déjà dans le select, sinon l'ajouter
+                            let optionExists = Array.from(document.getElementById('transmission').options).some(opt => opt.value.toLowerCase() === transmission.toLowerCase());
+                            if (!optionExists && transmission !== 'N/A') {
+                                let newOption = new Option(transmission, transmission);
+                                document.getElementById('transmission').add(newOption);
+                            }
+                            document.getElementById('transmission').value = transmission;
+                        }
+                        
+                        vinResultsDiv.style.display = 'block'; // Afficher les résultats
+                    } else {
+                        alert('Aucune information trouvée pour ce VIN. Il est peut-être non valide ou non supporté par cette API.');
+                    }
+                } catch (error) {
+                    console.error('Erreur lors du décodage du VIN:', error);
+                    alert('Une erreur est survenue lors du décodage du VIN. Veuillez vérifier votre connexion ou réessayer plus tard.');
+                }
+            } else {
+                alert('Veuillez entrer un VIN valide (17 caractères).');
             }
         });
 
-        // Script pour les onglets photos
-        document.querySelectorAll('.photo-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const tabId = tab.getAttribute('data-tab');
-                
-                // Désactiver tous les onglets
-                document.querySelectorAll('.photo-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.photo-tab-content').forEach(c => c.classList.remove('active'));
-                
-                // Activer l'onglet sélectionné
-                tab.classList.add('active');
-                document.getElementById(tabId).classList.add('active');
+
+        // --- GESTION DES FICHIERS POUR LES PHOTOS ---
+        // Objet pour stocker les fichiers de chaque catégorie
+        const allUploadedFiles = {
+            Exterieur: [],
+            Interieur: [],
+            Dommages: []
+        };
+
+        document.querySelectorAll('.photo-input').forEach(input => {
+            const category = input.dataset.category;
+            const maxFiles = parseInt(input.dataset.maxFiles || '10');
+            const previewContainer = document.getElementById(category.toLowerCase() + '-preview');
+
+            input.addEventListener('change', (event) => {
+                const newFiles = Array.from(event.target.files);
+
+                // Filtrer les fichiers non-image et vérifier la limite
+                const validNewFiles = newFiles.filter(file => file.type.startsWith('image/'));
+
+                // Ajouter les nouveaux fichiers valides au tableau existant
+                // Utiliser un Set pour éviter les doublons si l'utilisateur sélectionne plusieurs fois le même fichier
+                allUploadedFiles[category] = [...new Set([...allUploadedFiles[category], ...validNewFiles])];
+
+                // Tronquer si la limite est dépassée
+                if (allUploadedFiles[category].length > maxFiles) {
+                    alert(`Vous ne pouvez ajouter qu'un maximum de ${maxFiles} photos pour la catégorie "${category}". Les premières photos seront conservées.`);
+                    allUploadedFiles[category] = allUploadedFiles[category].slice(0, maxFiles);
+                }
+
+                renderPreviews(category, previewContainer);
             });
+
+            // Gérer le glisser-déposer (Drag and Drop)
+            const uploadLabel = input.previousElementSibling; // Le label est l'élément précédent l'input masqué
+            if (uploadLabel && uploadLabel.classList.contains('upload-label')) {
+                uploadLabel.addEventListener('dragover', (e) => {
+                    e.preventDefault(); // Empêche l'ouverture du fichier dans le navigateur
+                    uploadLabel.style.borderColor = 'var(--secondary)'; // Effet visuel
+                });
+
+                uploadLabel.addEventListener('dragleave', (e) => {
+                    uploadLabel.style.borderColor = '#ccc'; // Revertir l'effet visuel
+                });
+
+                uploadLabel.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadLabel.style.borderColor = '#ccc'; // Revertir l'effet visuel
+                    const droppedFiles = Array.from(e.dataTransfer.files);
+                    // Simuler l'ajout via l'input en créant un DataTransfer
+                    const dataTransfer = new DataTransfer();
+                    droppedFiles.forEach(file => dataTransfer.items.add(file));
+                    input.files = dataTransfer.files; // Attribue les fichiers glissés à l'input
+                    input.dispatchEvent(new Event('change')); // Déclenche l'événement change manuellement
+                });
+            }
         });
 
-        // Gestion des prévisualisations d'images
-        document.querySelectorAll('.photo-input').forEach(input => {
-            input.addEventListener('change', function() {
-                const previewContainer = document.getElementById(`${this.dataset.category}-preview`);
-                previewContainer.innerHTML = '';
-                
-                if (this.files) {
-                    Array.from(this.files).forEach(file => {
-                        if (!file.type.match('image.*')) return;
+        function renderPreviews(category, previewContainer) {
+            previewContainer.innerHTML = ''; // Efface tous les aperçus actuels
+            
+            if (allUploadedFiles[category].length === 0) {
+                previewContainer.innerHTML = 'Aucune image sélectionnée.';
+                return;
+            }
+
+            allUploadedFiles[category].forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const imgDiv = document.createElement('div');
+                    imgDiv.className = 'image-preview-item';
+                    imgDiv.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <button type="button" class="delete-image-btn" data-index="${index}" data-category="${category}">&times;</button>
+                    `;
+                    previewContainer.appendChild(imgDiv);
+
+                    // Écouteur pour le bouton de suppression
+                    imgDiv.querySelector('.delete-image-btn').addEventListener('click', (event) => {
+                        const fileIndex = parseInt(event.target.dataset.index);
+                        const fileCategory = event.target.dataset.category;
+
+                        // Supprime le fichier du tableau
+                        allUploadedFiles[fileCategory].splice(fileIndex, 1);
                         
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            const previewItem = document.createElement('div');
-                            previewItem.className = 'image-preview-item';
-                            
-                            previewItem.innerHTML = `
-                                <img src="${e.target.result}" alt="${file.name}">
-                                <button class="delete-image-btn">&times;</button>
-                            `;
-                            
-                            previewContainer.appendChild(previewItem);
-                            
-                            // Bouton de suppression
-                            previewItem.querySelector('.delete-image-btn').addEventListener('click', () => {
-                                previewItem.remove();
-                                // Réinitialiser l'input (solution simplifiée)
-                                this.value = '';
-                            });
-                        };
-                        reader.readAsDataURL(file);
+                        // Ré-affiche les aperçus pour mettre à jour les index et les visuels
+                        renderPreviews(fileCategory, document.getElementById(fileCategory.toLowerCase() + '-preview'));
                     });
-                }
+                };
+                reader.readAsDataURL(file); // Lit le fichier comme une URL de données pour l'aperçu
             });
+        }
+
+        // PDF Generation Logic (using jspdf)
+        document.getElementById('generatePdfBtn').addEventListener('click', async () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Collect form data
+            const vin = document.getElementById('vin').value || 'N/A';
+            const marque = document.getElementById('marque').value || 'N/A';
+            const modele = document.getElementById('modele').value || 'N/A';
+            const annee = document.getElementById('annee').value || 'N/A';
+            const kilometrage = document.getElementById('kilometrage').value || 'N/A';
+            const transmission = document.getElementById('transmission').value || 'N/A';
+            const carburant = document.getElementById('carburant').value || 'N/A';
+            const etatRadio = document.querySelector('input[name="etat"]:checked');
+            const etat = etatRadio ? etatRadio.value : 'N/A';
+
+            // Contact Info
+            const nom = document.getElementById('nom').value || 'N/A';
+            const courriel = document.getElementById('courriel').value || 'N/A';
+            const telephone = document.getElementById('telephone').value || 'N/A';
+            const ville = document.getElementById('ville').value || 'N/A'; 
+
+            let yPos = 10; // Y position for text
+            const margin = 10;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const imgWidth = 80; // Largeur des images dans le PDF
+            const imgHeight = 60; // Hauteur des images dans le PDF
+            const imgMargin = 5; // Marge entre les images
+
+            doc.setFontSize(18);
+            doc.text("Rapport d'Évaluation Véhicule", margin, yPos);
+            yPos += 10;
+            doc.setFontSize(12);
+            doc.text("Généré le: " + new Date().toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' }) + " à " + new Date().toLocaleTimeString('fr-CA'), margin, yPos);
+            yPos += 20;
+
+            doc.setFontSize(14);
+            doc.text("Informations du Véhicule:", margin, yPos);
+            yPos += 7;
+            doc.setFontSize(12);
+            doc.text(`VIN: ${vin}`, margin + 5, yPos); yPos += 7;
+            doc.text(`Marque: ${marque}`, margin + 5, yPos); yPos += 7;
+            doc.text(`Modèle: ${modele}`, margin + 5, yPos); yPos += 7;
+            doc.text(`Année: ${annee}`, margin + 5, yPos); yPos += 7;
+            doc.text(`Kilométrage: ${kilometrage} km`, margin + 5, yPos); yPos += 7;
+            doc.text(`Transmission: ${transmission}`, margin + 5, yPos); yPos += 7;
+            doc.text(`Carburant: ${carburant}`, margin + 5, yPos); yPos += 7;
+            doc.text(`État Général: ${etat}`, margin + 5, yPos); yPos += 15;
+
+            doc.setFontSize(14);
+            doc.text("Coordonnées du Propriétaire:", margin, yPos);
+            yPos += 7;
+            doc.setFontSize(12);
+            doc.text(`Nom: ${nom}`, margin + 5, yPos); yPos += 7;
+            doc.text(`Courriel: ${courriel}`, margin + 5, yPos); yPos += 7;
+            doc.text(`Téléphone: ${telephone}`, margin + 5, yPos); yPos += 7;
+            doc.text(`Ville: ${ville}`, margin + 5, yPos); yPos += 15;
+
+            doc.setFontSize(14);
+            doc.text("Photos Téléversées:", margin, yPos);
+            yPos += 7;
+            doc.setFontSize(12);
+
+            // Function to convert File to DataURL
+            const fileToDataURL = (file) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            for (const category in allUploadedFiles) {
+                if (allUploadedFiles[category].length > 0) {
+                    doc.text(`- Catégorie: ${category}`, margin + 5, yPos);
+                    yPos += 7;
+
+                    let currentX = margin + 10;
+                    for (const file of allUploadedFiles[category]) {
+                        // Check if there's enough space for the image + next image
+                        if (currentX + imgWidth + imgMargin > pageWidth - margin) {
+                            currentX = margin + 10; // Reset X for new row
+                            yPos += imgHeight + imgMargin; // Move down for new row
+                        }
+
+                        // Check for new page if not enough vertical space
+                        if (yPos + imgHeight + margin > pageHeight) {
+                            doc.addPage();
+                            yPos = margin; // Reset Y for new page
+                            currentX = margin + 10; // Reset X for new page
+                            doc.setFontSize(14);
+                            doc.text(`Photos Téléversées (suite):`, margin, yPos);
+                            yPos += 7;
+                            doc.setFontSize(12);
+                            doc.text(`- Catégorie: ${category} (suite)`, margin + 5, yPos);
+                            yPos += 7;
+                        }
+
+                        try {
+                            const dataURL = await fileToDataURL(file);
+                            doc.addImage(dataURL, file.type.split('/')[1].toUpperCase(), currentX, yPos, imgWidth, imgHeight);
+                            currentX += imgWidth + imgMargin;
+                        } catch (error) {
+                            console.error(`Erreur lors de l'ajout de l'image ${file.name}:`, error);
+                            doc.text(`[Image ${file.name} non chargée]`, currentX, yPos + imgHeight / 2); // Placeholder text
+                            currentX += imgWidth + imgMargin;
+                        }
+                    }
+                    yPos += imgHeight + imgMargin; // Move Y after last row of images for this category
+                    if (yPos > pageHeight - margin) { // Check if new page needed after category
+                        doc.addPage();
+                        yPos = margin;
+                    }
+                }
+            }
+
+            doc.save('Evaluation_Vehicule.pdf');
         });
+
+        // Form submission (placeholder)
+        document.getElementById('evaluationForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            // Here you would collect all form data (including photos)
+            // and send it to your server using Fetch API or XMLHttpRequest.
+            //
+            // POUR ENVOOYER LES PHOTOS AU SERVEUR :
+            // Vous devrez créer un objet FormData et y ajouter les fichiers du tableau 'allUploadedFiles'.
+            // const formData = new FormData(this); // Ceci prendra les autres champs du formulaire
+            // for (const category in allUploadedFiles) {
+            //     allUploadedFiles[category].forEach((file, index) => {
+            //         formData.append(`${category}_photo_${index}`, file); // Nommez vos fichiers de manière unique
+            //     });
+            // }
+            //
+            // Exemple d'envoi (nécessite un backend pour recevoir ces données):
+            // fetch('/submit-evaluation', {
+            //     method: 'POST',
+            //     body: formData
+            // })
+            // .then(response => response.json())
+            // .then(data => {
+            //     alert('Formulaire soumis avec succès!');
+            //     console.log(data);
+            //     // Handle success (e.g., redirect to a confirmation page)
+            // })
+            // .catch(error => {
+            //     console.error('Erreur lors de la soumission:', error);
+            //     alert('Une erreur est survenue lors de la soumission du formulaire.');
+            // });
+
+            alert('Formulaire soumis (logique de soumission réelle non implémentée). Le PDF a été généré.');
+
+            // You might call the PDF generation here if it's part of the submission flow
+            // document.getElementById('generatePdfBtn').click();
+        });
+
     </script>
 </body>
 </html>
