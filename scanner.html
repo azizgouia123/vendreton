@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VendreTonAutoRapide.ca | Scanner VIN</title>
     <style>
+        /* ... (votre CSS existant ici) ... */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -113,9 +114,6 @@
     <div id="result">VIN : Non détecté</div>
 
     <canvas id="canvas" style="display: none;"></canvas>
-
-    <script src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 
     <script>
         const video = document.getElementById('video');
@@ -309,5 +307,8 @@
             }
         });
     </script>
+
+    <script src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 </body>
 </html>
