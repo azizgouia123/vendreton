@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner VIN Instantané - VendreTonAutoRapide.ca</title>
+    <title>Scanner VIN Réel</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
         #camera { width: 100%; max-width: 600px; background: #000; border-radius: 8px; }
@@ -11,68 +11,104 @@
         #result { font-size: 1.3em; font-weight: bold; margin-top: 20px; padding: 15px; border-radius: 8px; }
         .valid { background: #e6f7ff; color: #2E8B57; }
         .invalid { background: #ffebee; color: #E31937; }
+        #debug { font-family: monospace; white-space: pre; text-align: left; }
     </style>
 </head>
 <body>
-    <h1>SCANNEZ VOTRE VIN EN 2 SECONDES</h1>
+    <h1>SCANNER VIN RÉEL</h1>
     <video id="camera" playsinline autoplay muted></video>
-    <button id="scan-btn">LANCER LE SCAN</button>
-    <div id="result">Prêt à scanner</div>
+    <button id="scan-btn">SCANNER</button>
+    <div id="result">Prêt</div>
+    <div id="debug"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script>
-        // 1. Démarrer la caméra IMMÉDIATEMENT
         const video = document.getElementById('camera');
         const scanBtn = document.getElementById('scan-btn');
         const resultDiv = document.getElementById('result');
-        
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-            .then(stream => video.srcObject = stream)
-            .catch(() => navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream => video.srcObject = stream)
-                .catch(err => resultDiv.textContent = "ERREUR: Caméra bloquée")
-            );
+        const debugDiv = document.getElementById('debug');
 
-        // 2. Solution OCR Réelle avec Tesseract.js
-        scanBtn.addEventListener('click', async () => {
-            resultDiv.textContent = "Analyse en cours...";
-            
-            // Capture de l'image
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            
-            // Chargement DYNAMIQUE de Tesseract (seulement au premier clic)
-            if (!window.Tesseract) {
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-                document.head.appendChild(script);
-                await new Promise(resolve => script.onload = resolve);
+        // 1. Initialisation caméra
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                video.srcObject = stream;
+                return true;
+            } catch (err) {
+                console.error("Erreur caméra:", err);
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = stream;
+                    return true;
+                } catch (err2) {
+                    resultDiv.textContent = "ERREUR: Accès caméra refusé";
+                    return false;
+                }
             }
-            
-            // Détection RÉELLE du VIN
-            const worker = await Tesseract.createWorker();
-            await worker.loadLanguage('eng');
-            await worker.initialize('eng');
-            await worker.setParameters({
-                tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ',
-                tessedit_pageseg_mode: '7'
-            });
-            
-            const { data: { text } } = await worker.recognize(canvas);
-            const vin = cleanVin(text);
-            
-            resultDiv.textContent = vin ? `VIN DÉTECTÉ: ${vin}` : "VIN NON RECONNU";
-            resultDiv.className = vin ? 'valid' : 'invalid';
-            
-            worker.terminate();
-        });
-        
-        // Nettoyage du VIN
+        }
+
+        // 2. Nettoyage VIN
         function cleanVin(text) {
-            const vin = text.replace(/[\s\W]/g, '').toUpperCase();
+            if (!text) return null;
+            const vin = text
+                .replace(/[\s\W]/g, '')
+                .toUpperCase()
+                .replace(/O/g, '0')
+                .replace(/I/g, '1')
+                .replace(/Q/g, '0');
             return vin.length === 17 && !/[IOQ]/.test(vin) ? vin : null;
         }
+
+        // 3. Scan réel
+        scanBtn.addEventListener('click', async () => {
+            if (!video.srcObject) {
+                if (!await initCamera()) return;
+            }
+
+            resultDiv.textContent = "Analyse en cours...";
+            debugDiv.textContent = "";
+
+            try {
+                // Capture image
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0);
+
+                // OCR réel
+                const worker = await Tesseract.createWorker();
+                await worker.loadLanguage('eng');
+                await worker.initialize('eng');
+                await worker.setParameters({
+                    tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ',
+                    tessedit_pageseg_mode: '7'
+                });
+
+                const { data } = await worker.recognize(canvas);
+                const rawText = data.text;
+                const vin = cleanVin(rawText);
+
+                debugDiv.textContent = `TEXTE BRUT:\n${rawText}\n\nVIN NETTOYÉ:\n${vin || "INVALIDE"}`;
+                resultDiv.textContent = vin ? `VIN VALIDE: ${vin}` : "VIN NON RECONNU";
+                resultDiv.className = vin ? 'valid' : 'invalid';
+
+                await worker.terminate();
+            } catch (err) {
+                resultDiv.textContent = "ERREUR: " + err.message;
+                resultDiv.className = 'invalid';
+                console.error(err);
+            }
+        });
+
+        // Démarrer
+        initCamera();
     </script>
 </body>
 </html>
