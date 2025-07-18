@@ -3,19 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner VIN Optique</title>
+    <title>Scanner VIN | VendreTonAutoRapide.ca</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
             text-align: center;
+            background-color: #f5f7fa;
         }
-        #camera-container {
-            width: 100%;
+        #scanner-container {
             max-width: 600px;
             margin: 20px auto;
-            position: relative;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         #camera-view {
             width: 100%;
@@ -28,7 +31,7 @@
             left: 50%;
             width: 80%;
             height: 20%;
-            border: 3px dashed red;
+            border: 3px dashed #E31937;
             transform: translate(-50%, -50%);
             pointer-events: none;
         }
@@ -41,62 +44,102 @@
             border-radius: 8px;
             margin: 20px 0;
             cursor: pointer;
+            transition: background 0.3s;
+        }
+        #capture-btn:hover {
+            background: #C0112B;
+        }
+        #capture-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
         }
         #result {
-            font-size: 1.3em;
-            font-weight: bold;
-            margin: 20px 0;
             padding: 15px;
             border-radius: 8px;
+            font-weight: bold;
+            margin: 20px 0;
         }
-        .valid { background: #E8F5E9; color: #2E8B57; }
-        .invalid { background: #FFEBEE; color: #E31937; }
+        .valid {
+            background: #E8F5E9;
+            color: #2E8B57;
+            border: 1px solid #2E8B57;
+        }
+        .invalid {
+            background: #FFEBEE;
+            color: #E31937;
+            border: 1px solid #E31937;
+        }
+        .processing {
+            background: #FFF3E0;
+            color: #FF9800;
+        }
+        .camera-container {
+            position: relative;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
-    <h1>Scanner de VIN</h1>
-    <p>Positionnez le VIN dans la zone rouge</p>
-    
-    <div id="camera-container">
-        <video id="camera-view" playsinline autoplay muted></video>
-        <div id="scan-area"></div>
+    <div id="scanner-container">
+        <h1>Scanner de VIN</h1>
+        <p>Positionnez le VIN dans la zone rouge ci-dessous</p>
+        
+        <div class="camera-container">
+            <video id="camera-view" playsinline autoplay muted></video>
+            <div id="scan-area"></div>
+        </div>
+        
+        <button id="capture-btn">Capturer le VIN</button>
+        <div id="result">Prêt à scanner</div>
     </div>
-    
-    <button id="capture-btn">Capturer le VIN</button>
-    <div id="result">Aucun VIN détecté</div>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script>
-        // Récupération de l'URL de retour depuis les paramètres
+        // Configuration
+        const SCANNER_VERSION = "1.0";
+        const MIN_CONFIDENCE = 85; // Seuil de confiance minimum pour validation
+        
+        // Récupération de l'URL de retour
         const urlParams = new URLSearchParams(window.location.search);
-        const returnUrl = urlParams.get('returnUrl') || 'evaluation.html';
-
+        const returnUrl = urlParams.get('returnUrl') || 'eval.html';
+        
         // Éléments UI
         const video = document.getElementById('camera-view');
         const captureBtn = document.getElementById('capture-btn');
         const resultDiv = document.getElementById('result');
         let worker = null;
+        let cameraStream = null;
 
         // Initialisation caméra
         async function initCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
+                const constraints = {
                     video: {
                         facingMode: 'environment',
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
                     }
+                };
+                
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = cameraStream;
+                
+                return new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        resolve(true);
+                    };
                 });
-                video.srcObject = stream;
-                return true;
             } catch (err) {
-                console.error("Erreur caméra:", err);
+                console.error("Erreur caméra arrière:", err);
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    video.srcObject = stream;
+                    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = cameraStream;
+                    video.play();
                     return true;
                 } catch (err2) {
-                    resultDiv.textContent = "ERREUR: Accès caméra impossible";
+                    console.error("Erreur caméra frontale:", err2);
+                    resultDiv.textContent = "ERREUR: Accès caméra impossible. Veuillez vérifier les permissions.";
                     resultDiv.className = "invalid";
                     return false;
                 }
@@ -104,8 +147,8 @@
         }
 
         // Validation VIN
-        function validateVIN(text) {
-            if (!text) return null;
+        function validateVin(text, confidence) {
+            if (!text || confidence < MIN_CONFIDENCE) return null;
             
             let vin = text.toUpperCase()
                          .replace(/[\s\W]/g, '')
@@ -113,33 +156,48 @@
                          .replace(/I/g, '1')
                          .replace(/Q/g, '0');
             
-            return vin.length === 17 && !/[IOQ]/.test(vin) ? vin : null;
+            // Validation stricte
+            if (vin.length !== 17 || /[IOQ]/.test(vin)) {
+                return null;
+            }
+            
+            return vin;
         }
 
         // Capture et analyse
         captureBtn.addEventListener('click', async () => {
+            if (!cameraStream) {
+                resultDiv.textContent = "La caméra n'est pas prête";
+                resultDiv.className = "invalid";
+                return;
+            }
+            
             resultDiv.textContent = "Analyse en cours...";
+            resultDiv.className = "processing";
             captureBtn.disabled = true;
             
             try {
                 // Initialisation OCR si nécessaire
                 if (!worker) {
-                    worker = await Tesseract.createWorker();
+                    worker = await Tesseract.createWorker({
+                        logger: m => console.debug(m)
+                    });
                     await worker.loadLanguage('eng');
                     await worker.initialize('eng');
                     await worker.setParameters({
                         tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ',
-                        tessedit_pageseg_mode: '7'
+                        tessedit_pageseg_mode: '7',  // Mode ligne unique
+                        preserve_interword_spaces: '0'
                     });
                 }
 
-                // Capture image
+                // Capture de la zone de scan
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 const videoRect = video.getBoundingClientRect();
                 const scanRect = document.getElementById('scan-area').getBoundingClientRect();
                 
-                // Dimensions relatives
+                // Calcul des dimensions
                 const scaleX = video.videoWidth / videoRect.width;
                 const scaleY = video.videoHeight / videoRect.height;
                 
@@ -154,34 +212,52 @@
                     0, 0, canvas.width, canvas.height
                 );
                 
-                // Analyse OCR
-                const { data: { text } } = await worker.recognize(canvas);
-                const vin = validateVIN(text);
+                // Analyse OCR avec récupération du score de confiance
+                const { data: { text, confidence } } = await worker.recognize(canvas);
+                const vin = validateVin(text, confidence);
                 
                 if (vin) {
-                    resultDiv.textContent = `VIN DÉTECTÉ: ${vin}`;
+                    resultDiv.textContent = `VIN VALIDE DÉTECTÉ: ${vin}`;
                     resultDiv.className = "valid";
                     
-                    // Envoi automatique après 2 secondes
+                    // Redirection après un court délai pour permettre la lecture
                     setTimeout(() => {
-                        window.location.href = `${returnUrl}?vin=${encodeURIComponent(vin)}`;
-                    }, 2000);
+                        window.location.href = `${returnUrl}?scannedVin=${encodeURIComponent(vin)}&source=scanner&v=${SCANNER_VERSION}`;
+                    }, 1500);
                 } else {
-                    resultDiv.textContent = `ERREUR: "${text}" n'est pas un VIN valide`;
+                    resultDiv.textContent = `ERREUR: Aucun VIN valide détecté (Confiance: ${confidence.toFixed(1)}%)`;
+                    if (text) {
+                        resultDiv.textContent += `\nTexte reconnu: "${text}"`;
+                    }
                     resultDiv.className = "invalid";
                     captureBtn.disabled = false;
                 }
                 
             } catch (err) {
                 console.error("Erreur analyse:", err);
-                resultDiv.textContent = "ERREUR: Analyse impossible";
+                resultDiv.textContent = "ERREUR: Analyse impossible - " + err.message;
                 resultDiv.className = "invalid";
                 captureBtn.disabled = false;
             }
         });
 
-        // Démarrer
-        initCamera();
+        // Nettoyage à la fermeture
+        window.addEventListener('beforeunload', () => {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+            if (worker) {
+                worker.terminate();
+            }
+        });
+
+        // Initialisation
+        (async function() {
+            const cameraReady = await initCamera();
+            if (cameraReady) {
+                captureBtn.disabled = false;
+            }
+        })();
     </script>
 </body>
 </html>
