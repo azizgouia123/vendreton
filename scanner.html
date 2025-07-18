@@ -61,9 +61,15 @@
             color: white;
             background-color: #E31937; /* Secondary Red */
         }
+        .btn-secondary {
+            background-color: #0056B3; /* Primary Blue */
+        }
         .btn:hover {
             background-color: #C0112B;
             transform: translateY(-2px);
+        }
+        .btn-secondary:hover {
+            background-color: #004499;
         }
         .btn:disabled {
             background-color: #cccccc;
@@ -98,6 +104,15 @@
         .info {
             color: #007bff; /* Blue */
         }
+        #manualVinInput {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-top: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            text-align: center;
+        }
         @media (max-width: 480px) {
             .btn {
                 font-size: 1em;
@@ -115,7 +130,7 @@
 <body>
     <div class="container">
         <h1>Scanner le Numéro VIN</h1>
-        <p>Positionnez le VIN de votre véhicule dans le cadre ci-dessous.</p>
+        <p>Positionnez le VIN de votre véhicule dans le cadre ci-dessous ou entrez-le manuellement.</p>
         <video id="videoElement" playsinline autoplay></video>
         <canvas id="canvas"></canvas>
         <div class="controls">
@@ -123,9 +138,16 @@
         </div>
         <div id="loadingMessage"></div>
         <div id="result" style="display: none;">
-            VIN Scanné: <strong id="vinDisplay"></strong><br>
+            VIN Scanné/Entré: <strong id="vinDisplay"></strong><br>
             Statut: <span id="statusDisplay"></span>
         </div>
+
+        <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">
+
+        <h2>Entrée Manuelle ou Correction</h2>
+        <input type="text" id="manualVinInput" placeholder="Entrez le VIN ici (17 caractères)" maxlength="17">
+        <button id="sendVinToEvalBtn" class="btn btn-secondary" style="margin-top: 15px;" disabled>Envoyer le VIN à l'évaluation</button>
+
     </div>
 
     <script>
@@ -137,9 +159,28 @@
         const vinDisplay = document.getElementById('vinDisplay');
         const statusDisplay = document.getElementById('statusDisplay');
         const resultDiv = document.getElementById('result');
+        const manualVinInput = document.getElementById('manualVinInput');
+        const sendVinToEvalBtn = document.getElementById('sendVinToEvalBtn');
 
         let worker; // Tesseract.js worker
         let stream; // MediaStream for camera
+        let currentScannedVin = ''; // Stocke le dernier VIN scanné/entré
+
+        // Fonction de redirection centralisée
+        function redirectToEval(vin) {
+            if (!vin || vin.length !== 17) {
+                alert("Veuillez entrer un VIN valide de 17 caractères pour continuer.");
+                return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const returnUrl = urlParams.get('returnUrl') || 'eval.html'; // Default to eval.html if no returnUrl
+
+            const targetUrl = new URL(returnUrl, window.location.origin); // Assurez-vous que l'URL est absolue
+            targetUrl.searchParams.set('vinScanned', vin); // Ajoutez le VIN comme paramètre
+            window.location.href = targetUrl.toString(); // Redirige
+        }
+
 
         // Initialise la caméra
         async function initCamera() {
@@ -179,8 +220,7 @@
             loadingMessage.textContent = "Chargement du moteur OCR (cela peut prendre un moment)...";
             try {
                 worker = await Tesseract.createWorker('eng', 1, {
-                    // Supprimez le logger pour éviter le DataCloneError
-                    // logger: m => {
+                    // logger: m => { // Commenté pour éviter les DataCloneError comme discuté précédemment
                     //     if (m.status === 'recognizing') {
                     //         loadingMessage.textContent = `Progression OCR: ${(m.progress * 100).toFixed(0)}%`;
                     //     } else {
@@ -189,11 +229,11 @@
                     // }
                 });
                 // Configure Tesseract for VIN recognition
-                await worker.reinitialize('eng'); // Reinitialize to apply parameters
+                await worker.reinitialize('eng');
                 await worker.setParameters({
-                    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE, // Assume single line of text
-                    preserve_interword_spaces: '0', // No spaces in VIN
-                    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ' // Only VIN characters
+                    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
+                    preserve_interword_spaces: '0',
+                    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
                 });
                 loadingMessage.textContent = "Moteur OCR prêt.";
             } catch (err) {
@@ -202,24 +242,20 @@
             }
         }
 
-        // Fonction de validation simplifiée du VIN (AJOUTER LE CHECKSUM ICI POUR PLUS DE FIABILITÉ)
+        // Fonction de validation simplifiée du VIN
         function validateVIN(vin) {
             if (!vin || vin.length !== 17) {
                 return false;
             }
-            // Caractères non autorisés dans un VIN
+            // Caractères non autorisés dans un VIN (I, O, Q)
             const invalidChars = /[IOQioq]/;
             if (invalidChars.test(vin)) {
                 return false;
             }
-            // Expressions régulières pour valider le format général (sans checksum)
+            // Expression régulière pour valider le format général (sans checksum)
             const vinPattern = /^[A-HJ-NPR-Z0-9]{17}$/;
             return vinPattern.test(vin);
-
-            // TODO: Pour une validation robuste, IMPLÉMENTEZ L'ALGORITHME DE CHECKSUM VIN ISO 3779/3780 ICI.
-            // C'est crucial pour s'assurer que le VIN est non seulement au bon format, mais aussi authentique.
-            // Exemple (conceptuel, vous devrez trouver l'implémentation exacte):
-            // return calculateVINChecksum(vin) === vin[8]; // où vin[8] est le caractère de checksum
+            // TODO: Implémentez l'algorithme de CHECKSUM VIN ISO 3779/3780 ici pour une validation robuste.
         }
 
         // Capture la photo et lance l'OCR
@@ -234,11 +270,11 @@
             }
 
             captureBtn.disabled = true;
+            sendVinToEvalBtn.disabled = true; // Désactivez l'envoi pendant le scan
             loadingMessage.textContent = "Capture de l'image et reconnaissance du VIN...";
-            statusDisplay.textContent = ""; // Clear previous status
-            resultDiv.style.display = 'none'; // Hide results until new scan
+            statusDisplay.textContent = "";
+            resultDiv.style.display = 'none';
 
-            // Set canvas dimensions to video dimensions
             canvas.width = videoElement.videoWidth;
             canvas.height = videoElement.videoHeight;
             context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
@@ -247,42 +283,69 @@
                 const { data: { text } } = await worker.recognize(canvas);
                 let scannedVin = text.replace(/\s+/g, '').toUpperCase(); // Supprime les espaces et met en majuscules
 
-                // Nettoyage commun des erreurs OCR (si Tesseract confond O/0, I/1, Q/0)
+                // Nettoyage commun des erreurs OCR
                 scannedVin = scannedVin.replace(/O/g, '0')
                                        .replace(/I/g, '1')
                                        .replace(/Q/g, '0');
 
+                currentScannedVin = scannedVin; // Stocke le VIN scanné
+                manualVinInput.value = scannedVin; // Affiche dans le champ manuel
                 vinDisplay.textContent = scannedVin;
                 resultDiv.style.display = 'block';
 
                 if (validateVIN(scannedVin)) {
-                    statusDisplay.textContent = "VIN valide ! Redirection...";
+                    statusDisplay.textContent = "VIN valide !";
                     statusDisplay.className = "feedback success";
-
-                    // REDIRECTION VERS EVAL.HTML AVEC LE VIN
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const returnUrl = urlParams.get('returnUrl');
-
-                    if (returnUrl) {
-                        const targetUrl = new URL(returnUrl);
-                        targetUrl.searchParams.set('vinScanned', scannedVin); // Ajoutez le VIN comme paramètre
-                        window.location.href = targetUrl.toString(); // Redirige
-                    } else {
-                        // Fallback si pas d'URL de retour (ne devrait pas arriver avec votre setup)
-                        alert("VIN scanné avec succès : " + scannedVin + ". Pas d'URL de retour spécifiée.");
-                    }
+                    sendVinToEvalBtn.disabled = false; // Active le bouton d'envoi si VIN valide
                 } else {
-                    statusDisplay.textContent = "VIN invalide ou non reconnu. Veuillez réessayer.";
+                    statusDisplay.textContent = "VIN invalide ou non reconnu. Veuillez vérifier ou corriger manuellement.";
                     statusDisplay.className = "feedback error";
+                    sendVinToEvalBtn.disabled = false; // Laisse l'utilisateur envoyer même si invalide pour correction
                 }
             } catch (error) {
                 console.error("Erreur lors de la reconnaissance OCR:", error);
-                statusDisplay.textContent = "Erreur lors du scan. Veuillez réessayer.";
+                statusDisplay.textContent = "Erreur lors du scan. Veuillez réessayer ou entrer manuellement.";
                 statusDisplay.className = "feedback error";
+                sendVinToEvalBtn.disabled = false; // Permet l'envoi manuel en cas d'erreur OCR
             } finally {
                 loadingMessage.textContent = "";
                 captureBtn.disabled = false;
             }
+        });
+
+        // Écouteur pour le champ de saisie manuel
+        manualVinInput.addEventListener('input', function() {
+            const vin = this.value.trim().toUpperCase();
+            this.value = vin; // Mettre en majuscules en temps réel
+            currentScannedVin = vin; // Met à jour le VIN actuel
+
+            vinDisplay.textContent = vin;
+            resultDiv.style.display = 'block';
+
+            if (vin.length === 17 && validateVIN(vin)) {
+                statusDisplay.textContent = "VIN valide !";
+                statusDisplay.className = "feedback success";
+                sendVinToEvalBtn.disabled = false;
+            } else if (vin.length === 17 && !validateVIN(vin)) {
+                statusDisplay.textContent = "VIN invalide (format incorrect ou caractères interdits).";
+                statusDisplay.className = "feedback error";
+                sendVinToEvalBtn.disabled = false; // Laisse l'utilisateur envoyer pour correction potentielle sur eval.html
+            } else {
+                statusDisplay.textContent = "Entrez un VIN de 17 caractères.";
+                statusDisplay.className = "feedback info";
+                sendVinToEvalBtn.disabled = true; // Désactive si pas 17 caractères
+            }
+
+            if (vin.length === 0) {
+                resultDiv.style.display = 'none'; // Cache le résultat si le champ est vide
+                sendVinToEvalBtn.disabled = true;
+            }
+        });
+
+        // Écouteur pour le nouveau bouton d'envoi manuel
+        sendVinToEvalBtn.addEventListener('click', function() {
+            const vinToSend = manualVinInput.value.trim().toUpperCase();
+            redirectToEval(vinToSend);
         });
 
         // Initialisation au chargement de la page
