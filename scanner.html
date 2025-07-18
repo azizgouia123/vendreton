@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner VIN Optique</title>
+    <title>Scanner VIN Optique | VendreTonAutoRapide.ca</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,6 +15,10 @@
         #scanner-container {
             max-width: 600px;
             margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         #camera-view {
             width: 100%;
@@ -28,9 +32,10 @@
             left: 50%;
             width: 80%;
             height: 20%;
-            border: 3px dashed red;
+            border: 3px solid #E31937;
             transform: translate(-50%, -50%);
             pointer-events: none;
+            box-sizing: border-box;
         }
         #capture-btn {
             background: #2E8B57;
@@ -41,49 +46,70 @@
             border-radius: 8px;
             margin: 20px 0;
             cursor: pointer;
+            transition: background 0.3s;
+            width: 100%;
+            max-width: 300px;
+        }
+        #capture-btn:hover {
+            background: #267a4b;
+        }
+        #capture-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
         }
         #result {
             padding: 15px;
             background: #e8f4fc;
             border-radius: 8px;
-            font-family: monospace;
-            font-size: 1.3em;
+            font-size: 1.2em;
             min-height: 60px;
-        }
-        .processing {
-            background: #FFF3E0 !important;
+            margin: 10px 0;
         }
         .valid {
             background: #E8F5E9 !important;
             color: #2E8B57;
+            border: 1px solid #2E8B57;
         }
         .invalid {
             background: #FFEBEE !important;
             color: #E31937;
+            border: 1px solid #E31937;
+        }
+        .processing {
+            background: #FFF3E0 !important;
+            color: #FF9800;
+        }
+        .camera-container {
+            position: relative;
+            margin: 20px 0;
         }
     </style>
 </head>
 <body>
     <div id="scanner-container">
-        <h1>Scanner VIN Optique</h1>
-        <p>Positionnez le VIN dans la zone rouge</p>
+        <h1>Scanner VIN</h1>
+        <p>Positionnez le numéro VIN dans la zone rouge</p>
         
-        <div style="position: relative;">
+        <div class="camera-container">
             <video id="camera-view" playsinline autoplay muted></video>
-            <div id="scan-area"></div>
+            <div id="scan-area">Cadrez le VIN ici</div>
         </div>
         
-        <button id="capture-btn">Capturer le VIN</button>
-        <div id="result">Aucun VIN détecté</div>
+        <button id="capture-btn" disabled>Scanner le VIN</button>
+        <div id="result">Initialisation en cours...</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script>
+        // Configuration
+        const MIN_VIN_CONFIDENCE = 80; // Seuil de confiance minimum
+        
         // Éléments UI
         const video = document.getElementById('camera-view');
         const captureBtn = document.getElementById('capture-btn');
         const resultDiv = document.getElementById('result');
         let worker = null;
+        let cameraStream = null;
 
         // 1. Initialisation de la caméra
         async function initCamera() {
@@ -96,8 +122,8 @@
                     }
                 };
                 
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = stream;
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = cameraStream;
                 
                 return new Promise((resolve) => {
                     video.onloadedmetadata = () => {
@@ -106,10 +132,10 @@
                     };
                 });
             } catch (err) {
-                console.error("Erreur caméra:", err);
+                console.error("Erreur caméra arrière:", err);
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    video.srcObject = stream;
+                    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = cameraStream;
                     video.play();
                     return true;
                 } catch (err2) {
@@ -120,8 +146,8 @@
             }
         }
 
-        // 2. Préparation OCR
-        async function prepareOCR() {
+        // 2. Initialisation OCR
+        async function initOCR() {
             try {
                 worker = await Tesseract.createWorker();
                 await worker.loadLanguage('eng');
@@ -141,30 +167,20 @@
         }
 
         // 3. Validation VIN
-        function validateVIN(text) {
-            if (!text) return null;
+        function validateVIN(text, confidence) {
+            if (!text || confidence < MIN_VIN_CONFIDENCE) return null;
             
-            // Nettoyage du texte
             let vin = text.toUpperCase()
                          .replace(/[\s\W]/g, '')
                          .replace(/O/g, '0')
                          .replace(/I/g, '1')
                          .replace(/Q/g, '0');
             
-            // Validation format
-            if (vin.length !== 17 || /[IOQ]/.test(vin)) {
-                return null;
-            }
-            
-            return vin;
+            return vin.length === 17 && !/[IOQ]/.test(vin) ? vin : null;
         }
 
         // 4. Capture et analyse
         captureBtn.addEventListener('click', async () => {
-            if (!worker) {
-                if (!await prepareOCR()) return;
-            }
-            
             resultDiv.textContent = "Analyse en cours...";
             resultDiv.className = "processing";
             captureBtn.disabled = true;
@@ -176,51 +192,70 @@
                 const videoRect = video.getBoundingClientRect();
                 const scanRect = document.getElementById('scan-area').getBoundingClientRect();
                 
-                // Calcul des dimensions relatives
+                // Calcul des dimensions
                 const scaleX = video.videoWidth / videoRect.width;
                 const scaleY = video.videoHeight / videoRect.height;
                 
-                const captureWidth = scanRect.width * scaleX;
-                const captureHeight = scanRect.height * scaleY;
-                const captureX = (scanRect.left - videoRect.left) * scaleX;
-                const captureY = (scanRect.top - videoRect.top) * scaleY;
-                
-                canvas.width = captureWidth;
-                canvas.height = captureHeight;
+                canvas.width = scanRect.width * scaleX;
+                canvas.height = scanRect.height * scaleY;
                 context.drawImage(
                     video, 
-                    captureX, captureY, captureWidth, captureHeight,
-                    0, 0, captureWidth, captureHeight
+                    (scanRect.left - videoRect.left) * scaleX,
+                    (scanRect.top - videoRect.top) * scaleY,
+                    scanRect.width * scaleX,
+                    scanRect.height * scaleY,
+                    0, 0, canvas.width, canvas.height
                 );
                 
-                // Analyse OCR
-                const { data: { text } } = await worker.recognize(canvas);
-                const vin = validateVIN(text);
+                // Analyse OCR avec score de confiance
+                const { data: { text, confidence } } = await worker.recognize(canvas);
+                const vin = validateVIN(text, confidence);
                 
-                // Affichage résultat
                 if (vin) {
                     resultDiv.textContent = `VIN DÉTECTÉ: ${vin}`;
                     resultDiv.className = "valid";
+                    
+                    // Redirection vers eval.html après 1.5s
+                    setTimeout(() => {
+                        window.location.href = `eval.html?vin=${encodeURIComponent(vin)}`;
+                    }, 1500);
                 } else {
-                    resultDiv.textContent = `TEXTE LU: "${text}"\n\nVIN NON VALIDE`;
+                    resultDiv.textContent = `ERREUR: Aucun VIN valide détecté (Confiance: ${Math.round(confidence)}%)`;
+                    if (text) {
+                        resultDiv.textContent += `\nTexte lu: "${text}"`;
+                    }
                     resultDiv.className = "invalid";
+                    captureBtn.disabled = false;
                 }
                 
             } catch (err) {
                 console.error("Erreur analyse:", err);
                 resultDiv.textContent = "ERREUR: Analyse impossible";
                 resultDiv.className = "invalid";
-            } finally {
                 captureBtn.disabled = false;
             }
         });
 
-        // Initialisation
+        // Initialisation complète
         (async function() {
-            await initCamera();
-            await prepareOCR();
-            captureBtn.disabled = false;
+            const cameraReady = await initCamera();
+            const ocrReady = await initOCR();
+            
+            if (cameraReady && ocrReady) {
+                resultDiv.textContent = "Prêt à scanner";
+                captureBtn.disabled = false;
+            }
         })();
+
+        // Nettoyage
+        window.addEventListener('beforeunload', () => {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+            if (worker) {
+                worker.terminate();
+            }
+        });
     </script>
 </body>
 </html>
