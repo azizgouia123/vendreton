@@ -327,6 +327,7 @@
             justify-content: center;
             font-weight: bold;
             font-size: 12px;
+            z-index: 10;
         }
 
         .photo-details {
@@ -602,7 +603,7 @@
                         <div style="display: flex; gap: 10px; margin-top: 10px;">
                             <input type="text" id="vin" class="form-control" placeholder="Entrez le VIN de 17 caractères" maxlength="17" pattern="[A-HJ-NPR-Z0-9]{17}" title="Le VIN doit contenir 17 caractères alphanumériques (sans I, O, Q)" required style="flex: 1;">
                             <button type="button" id="scanVinBtn" class="btn" title="Scanner avec la caméra"
-                                    onclick="window.location.href='scanner.html?returnUrl=' + encodeURIComponent(window.location.href);">
+                                onclick="window.location.href='scanner.html?returnUrl=' + encodeURIComponent(window.location.href);">
                                 <i class="fas fa-camera"></i>
                             </button>
                         </div>
@@ -826,32 +827,8 @@
                         </div>
                     </div>
 
-                    <div class="full-width" style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 30px;">
-                        <h3 style="text-align: center; margin-bottom: 20px; color: var(--primary);">Vos Coordonnées</h3>
-                        <p style="text-align: center; color: var(--gray); margin-bottom: 30px;">Veuillez nous fournir vos informations de contact pour recevoir l'évaluation.</p>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="nom">Nom Complet</label>
-                                <input type="text" id="nom" class="form-control" placeholder="Votre nom" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="courriel">Courriel</label>
-                                <input type="email" id="courriel" class="form-control" placeholder="votre.courriel@exemple.com" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="telephone">Numéro de Téléphone</label>
-                                <input type="tel" id="telephone" class="form-control" placeholder="123-456-7890" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="ville">Ville</label>
-                                <input type="text" id="ville" class="form-control" placeholder="Ex: Repentigny" required>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group full-width" style="margin-top: 30px;">
-                        <button type="submit" class="btn btn-block">Soumettre et Obtenir l'Évaluation</button>
-                        <button type="button" id="generatePdfBtn" class="btn btn-block" style="background-color: var(--primary); margin-top: 15px;">Générer le PDF de l'Évaluation</button>
+                    <div class="full-width" style="margin-top: 40px;">
+                        <button type="submit" class="btn btn-block">Obtenir mon évaluation gratuite</button>
                     </div>
                 </div>
             </form>
@@ -859,406 +836,259 @@
     </div>
 
     <script>
-        // Tab functionality for photo upload
-        document.querySelectorAll('.photo-tab').forEach(button => {
-            button.addEventListener('click', () => {
-                document.querySelectorAll('.photo-tab').forEach(btn => btn.classList.remove('active'));
-                document.querySelectorAll('.photo-tab-content').forEach(content => content.classList.remove('active'));
+        document.addEventListener('DOMContentLoaded', function() {
+            const vinInput = document.getElementById('vin');
+            const decodeVinBtn = document.getElementById('decodeVinBtn');
+            const vinDecoderResults = document.getElementById('vin-decoder-results');
 
-                button.classList.add('active');
-                document.getElementById(button.dataset.tab).classList.add('active');
-            });
-        });
+            // Fonction pour remplir les résultats du décodage (vous aurez besoin de votre API de décodage VIN ici)
+            async function decodeVin(vin) {
+                vinDecoderResults.style.display = 'block'; // Afficher la section des résultats
 
-        // Dynamic Year for 'annee' select
-        const anneeSelect = document.getElementById('annee');
-        const currentYear = new Date().getFullYear();
-        for (let year = currentYear; year >= 1990; year--) {
-            const option = document.createElement('option');
-            option.value = year;
-            option.textContent = year;
-            anneeSelect.appendChild(option);
-        }
-
-        // --- DÉCODEUR VIN RÉEL (API NHTSA - CÔTÉ CLIENT) ---
-        // ATTENTION : Cette API est principalement pour les véhicules nord-américains et est limitée.
-        // Pour une solution complète et fiable, un backend est recommandé.
-        document.getElementById('decodeVinBtn').addEventListener('click', async () => {
-            const vinInput = document.getElementById('vin').value.trim(); // Trim pour enlever les espaces
-            const vinResultsDiv = document.getElementById('vin-decoder-results');
-            vinResultsDiv.style.display = 'none'; // Cacher les résultats précédents
-
-            // Réinitialiser les champs affichés
-            document.getElementById('decodedMarque').textContent = 'N/A';
-            document.getElementById('decodedModele').textContent = 'N/A';
-            // CORRECTION ICI: document.getElementById au lieu de document()
-            document.getElementById('decodedAnnee').textContent = 'N/A';
-            document.getElementById('decodedCarburant').textContent = 'N/A';
-            document.getElementById('decodedTransmission').textContent = 'N/A';
-
-            // Réinitialiser les champs du formulaire pré-remplis
-            document.getElementById('marque').value = '';
-            document.getElementById('modele').value = '';
-            document.getElementById('annee').value = '';
-            document.getElementById('carburant').value = '';
-            document.getElementById('transmission').value = '';
+                // Réinitialiser les champs de décodage
+                document.getElementById('decodedMarque').textContent = 'Décodage en cours...';
+                document.getElementById('decodedModele').textContent = 'Décodage en cours...';
+                document.getElementById('decodedAnnee').textContent = 'Décodage en cours...';
+                document.getElementById('decodedCarburant').textContent = 'Décodage en cours...';
+                document.getElementById('decodedTransmission').textContent = 'Décodage en cours...';
 
 
-            if (vinInput.length === 17) {
                 try {
-                    const apiUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${vinInput}?format=json`;
-                    const response = await fetch(apiUrl);
-                    const data = await response.json();
+                    // REMPLACEZ CETTE PARTIE PAR VOTRE LOGIQUE D'APPEL API RÉELLE.
+                    // C'est ici que vous interrogeriez un service de décodage VIN.
+                    // Exemple avec une fausse attente pour simuler un appel réseau
+                    // const response = await fetch(`VOTRE_API_DECODAGE_VIN_URL?vin=${vin}`);
+                    // const data = await response.json();
 
-                    if (data && data.Results && data.Results.length > 0) {
-                        const decodedVehicle = data.Results[0]; // Prend le premier résultat
+                    // Données factices pour la démonstration (À SUPPRIMER POUR UNE VRAIE INTÉGRATION)
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Simule un délai réseau
+                    const fakeData = {
+                        Make: 'Honda',
+                        Model: 'Civic',
+                        ModelYear: '2023',
+                        FuelTypePrimary: 'Essence',
+                        TransmissionStyle: 'Automatique'
+                    };
 
-                        // Fonction utilitaire pour obtenir une valeur et retourner 'N/A' si vide/null
-                        const getValue = (val) => (val && val !== "null" && val !== "") ? val : 'N/A';
+                    // Mettre à jour les éléments HTML avec les données décodées
+                    document.getElementById('decodedMarque').textContent = fakeData.Make || 'N/A';
+                    document.getElementById('decodedModele').textContent = fakeData.Model || 'N/A';
+                    document.getElementById('decodedAnnee').textContent = fakeData.ModelYear || 'N/A';
+                    document.getElementById('decodedCarburant').textContent = fakeData.FuelTypePrimary || 'N/A';
+                    document.getElementById('decodedTransmission').textContent = fakeData.TransmissionStyle || 'N/A';
 
-                        // Normalisation et affichage de la Marque
-                        let marque = getValue(decodedVehicle.Make);
-                        if (marque !== 'N/A') {
-                            marque = marque.charAt(0).toUpperCase() + marque.slice(1).toLowerCase();
+                    // Remplir les champs du formulaire avec les valeurs décodées si elles sont présentes
+                    // Assurez-vous que les options existent dans vos <select>
+                    if (fakeData.Make) {
+                        const marqueSelect = document.getElementById('marque');
+                        const optionExists = Array.from(marqueSelect.options).some(option => option.value === fakeData.Make);
+                        if (optionExists) {
+                            marqueSelect.value = fakeData.Make;
+                        } else {
+                            // Option non trouvée, l'ajouter ou gérer l'erreur
+                            console.warn(`Marque "${fakeData.Make}" non trouvée dans la liste des options.`);
                         }
-                        document.getElementById('decodedMarque').textContent = marque;
-
-                        // Normalisation et affichage du Modèle (juste la première lettre en majuscule)
-                        let modele = getValue(decodedVehicle.Model);
-                        if (modele !== 'N/A') {
-                            modele = modele.charAt(0).toUpperCase() + modele.slice(1).toLowerCase();
-                        }
-                        document.getElementById('decodedModele').textContent = modele;
-
-                        // Affichage de l'Année
-                        const annee = getValue(decodedVehicle.ModelYear);
-                        document.getElementById('decodedAnnee').textContent = annee;
-
-                        // Normalisation et affichage du Carburant
-                        let carburant = getValue(decodedVehicle.FuelTypePrimary || decodedVehicle.FuelType);
-                        const carburantMap = {
-                            "GASOLINE": "Essence",
-                            "DIESEL": "Diesel",
-                            "ELECTRIC": "Électrique",
-                            "HYBRID": "Hybride",
-                            "FLEXIBLE": "Essence/Éthanol",
-                            "ETHANOL": "Éthanol",
-                            "CNG": "GNV", // Gaz Naturel Véhicule
-                            "LPG": "GPL"  // Gaz de Pétrole Liquéfié
-                        };
-                        carburant = carburantMap[carburant.toUpperCase()] || carburant; // Traduit ou garde l'original si non trouvé
-                        document.getElementById('decodedCarburant').textContent = carburant;
-
-                        // Normalisation et affichage de la Transmission
-                        let transmission = getValue(decodedVehicle.TransmissionStyle || decodedVehicle.Transmission);
-                        const transmissionMap = {
-                            "AUTOMATIC": "Automatique",
-                            "MANUAL": "Manuelle",
-                            "SEMI-AUTOMATIC": "Semi-automatique",
-                            "CVT": "CVT",
-                            "AUTOMATED MANUAL": "Manuelle Automatisée"
-                        };
-                        transmission = transmissionMap[transmission.toUpperCase()] || transmission; // Traduit ou garde l'original si non trouvé
-                        document.getElementById('decodedTransmission').textContent = transmission;
-
-                        // Pré-remplir les champs du formulaire si les données sont valides et non vides
-                        if (marque !== 'N/A') {
-                            // Vérifier si l'option de la marque existe, sinon l'ajouter pour la pré-sélection
-                            let optionExists = Array.from(document.getElementById('marque').options).some(opt => opt.value.toLowerCase() === marque.toLowerCase());
-                            if (!optionExists && marque !== 'N/A') {
-                                let newOption = new Option(marque, marque);
-                                document.getElementById('marque').add(newOption);
-                            }
-                            document.getElementById('marque').value = marque;
-                        }
-                        if (modele !== 'N/A') document.getElementById('modele').value = modele;
-                        if (annee !== 'N/A') document.getElementById('annee').value = annee;
-                        
-                        if (carburant !== 'N/A') {
-                            // Vérifier si l'option existe déjà dans le select, sinon l'ajouter (pour les cas non standards)
-                            let optionExists = Array.from(document.getElementById('carburant').options).some(opt => opt.value.toLowerCase() === carburant.toLowerCase());
-                            if (!optionExists && carburant !== 'N/A') {
-                                let newOption = new Option(carburant, carburant);
-                                document.getElementById('carburant').add(newOption);
-                            }
-                            document.getElementById('carburant').value = carburant;
-                        }
-
-                        if (transmission !== 'N/A') {
-                             // Vérifier si l'option existe déjà dans le select, sinon l'ajouter
-                            let optionExists = Array.from(document.getElementById('transmission').options).some(opt => opt.value.toLowerCase() === transmission.toLowerCase());
-                            if (!optionExists && transmission !== 'N/A') {
-                                let newOption = new Option(transmission, transmission);
-                                document.getElementById('transmission').add(newOption);
-                            }
-                            document.getElementById('transmission').value = transmission;
-                        }
-                        
-                        vinResultsDiv.style.display = 'block'; // Afficher les résultats
-                    } else {
-                        alert('Aucune information trouvée pour ce VIN. Il est peut-être non valide ou non supporté par cette API.');
                     }
+                    if (fakeData.Model) document.getElementById('modele').value = fakeData.Model;
+                    if (fakeData.ModelYear) document.getElementById('annee').value = fakeData.ModelYear; // Année sera auto-remplie si l'option existe
+
+                    if (fakeData.FuelTypePrimary) {
+                        const carburantSelect = document.getElementById('carburant');
+                        const optionExists = Array.from(carburantSelect.options).some(option => option.value === fakeData.FuelTypePrimary);
+                        if (optionExists) {
+                            carburantSelect.value = fakeData.FuelTypePrimary;
+                        } else {
+                            console.warn(`Carburant "${fakeData.FuelTypePrimary}" non trouvé dans la liste des options.`);
+                        }
+                    }
+                    if (fakeData.TransmissionStyle) {
+                        const transmissionSelect = document.getElementById('transmission');
+                        const optionExists = Array.from(transmissionSelect.options).some(option => option.value === fakeData.TransmissionStyle);
+                        if (optionExists) {
+                            transmissionSelect.value = fakeData.TransmissionStyle;
+                        } else {
+                            console.warn(`Transmission "${fakeData.TransmissionStyle}" non trouvée dans la liste des options.`);
+                        }
+                    }
+
                 } catch (error) {
-                    console.error('Erreur lors du décodage du VIN:', error);
-                    alert('Une erreur est survenue lors du décodage du VIN. Veuillez vérifier votre connexion ou réessayer plus tard.');
+                    console.error('Erreur lors du décodage VIN:', error);
+                    // Gérer les erreurs de décodage
+                    document.getElementById('decodedMarque').textContent = 'Erreur lors du décodage';
+                    document.getElementById('decodedModele').textContent = 'Erreur lors du décodage';
+                    document.getElementById('decodedAnnee').textContent = 'Erreur lors du décodage';
+                    document.getElementById('decodedCarburant').textContent = 'Erreur lors du décodage';
+                    document.getElementById('decodedTransmission').textContent = 'Erreur lors du décodage';
+                    vinDecoderResults.style.display = 'block'; // Assurez-vous que le bloc reste visible pour l'erreur
                 }
-            } else {
-                alert('Veuillez entrer un VIN valide (17 caractères).');
             }
-        });
 
+            // --- Logique pour gérer le VIN scanné depuis l'URL ---
+            const urlParams = new URLSearchParams(window.location.search);
+            const scannedVin = urlParams.get('vinScanned');
 
-        // --- GESTION DES FICHIERS POUR LES PHOTOS ---
-        // Objet pour stocker les fichiers de chaque catégorie
-        const allUploadedFiles = {
-            Exterieur: [],
-            Interieur: [],
-            Dommages: []
-        };
+            if (scannedVin) {
+                vinInput.value = scannedVin; // Remplir le champ VIN
+                // Optionnel: Supprimer le paramètre 'vinScanned' de l'URL pour une URL plus propre
+                urlParams.delete('vinScanned');
+                const newUrl = window.location.origin + window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+                window.history.replaceState({}, document.title, newUrl);
 
-        document.querySelectorAll('.photo-input').forEach(input => {
-            const category = input.dataset.category;
-            const maxFiles = parseInt(input.dataset.maxFiles || '10');
-            const previewContainer = document.getElementById(category.toLowerCase() + '-preview');
+                // Déclencher le décodage du VIN automatiquement
+                decodeVin(scannedVin);
+            }
 
-            input.addEventListener('change', (event) => {
-                const newFiles = Array.from(event.target.files);
+            // Initialisation de la liste des années
+            const currentYear = new Date().getFullYear();
+            const yearSelect = document.getElementById('annee');
+            for (let i = currentYear + 1; i >= 1981; i--) { // +1 pour inclure l'année prochaine si nécessaire
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                yearSelect.appendChild(option);
+            }
 
-                // Filtrer les fichiers non-image et vérifier la limite
-                const validNewFiles = newFiles.filter(file => file.type.startsWith('image/'));
-
-                // Ajouter les nouveaux fichiers valides au tableau existant
-                // Utiliser un Set pour éviter les doublons si l'utilisateur sélectionne plusieurs fois le même fichier
-                allUploadedFiles[category] = [...new Set([...allUploadedFiles[category], ...validNewFiles])];
-
-                // Tronquer si la limite est dépassée
-                if (allUploadedFiles[category].length > maxFiles) {
-                    alert(`Vous ne pouvez ajouter qu'un maximum de ${maxFiles} photos pour la catégorie "${category}". Les premières photos seront conservées.`);
-                    allUploadedFiles[category] = allUploadedFiles[category].slice(0, maxFiles);
+            // Écouteur d'événement pour le bouton "Décoder le VIN"
+            decodeVinBtn.addEventListener('click', function() {
+                const vin = vinInput.value.trim().toUpperCase();
+                // Assurez-vous que le VIN a 17 caractères et ne contient pas les lettres interdites
+                if (vin.length === 17 && /^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
+                    decodeVin(vin);
+                } else {
+                    alert("Veuillez entrer un VIN valide de 17 caractères (sans I, O, Q).");
+                    vinDecoderResults.style.display = 'none'; // Cacher les résultats si VIN invalide
                 }
-
-                renderPreviews(category, previewContainer);
             });
 
-            // Gérer le glisser-déposer (Drag and Drop)
-            const uploadLabel = input.previousElementSibling; // Le label est l'élément précédent l'input masqué
-            if (uploadLabel && uploadLabel.classList.contains('upload-label')) {
-                uploadLabel.addEventListener('dragover', (e) => {
-                    e.preventDefault(); // Empêche l'ouverture du fichier dans le navigateur
-                    uploadLabel.style.borderColor = 'var(--secondary)'; // Effet visuel
+            // --- Gestion des onglets Photo ---
+            const photoTabs = document.querySelectorAll('.photo-tab');
+            const photoContents = document.querySelectorAll('.photo-tab-content');
+
+            photoTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    photoTabs.forEach(t => t.classList.remove('active'));
+                    photoContents.forEach(c => c.classList.remove('active'));
+
+                    this.classList.add('active');
+                    document.getElementById(this.dataset.tab).classList.add('active');
                 });
+            });
 
-                uploadLabel.addEventListener('dragleave', (e) => {
-                    uploadLabel.style.borderColor = '#ccc'; // Revertir l'effet visuel
-                });
+            // --- Gestion des téléchargements d'images ---
+            document.querySelectorAll('.photo-input').forEach(input => {
+                input.addEventListener('change', function(event) {
+                    const previewContainerId = this.id.replace('photo', '').toLowerCase() + '-preview';
+                    const previewContainer = document.getElementById(previewContainerId);
+                    const maxFiles = parseInt(this.dataset.maxFiles || '5'); // Default max 5 if not specified
 
-                uploadLabel.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    uploadLabel.style.borderColor = '#ccc'; // Revertir l'effet visuel
-                    const droppedFiles = Array.from(e.dataTransfer.files);
-                    // Simuler l'ajout via l'input en créant un DataTransfer
-                    const dataTransfer = new DataTransfer();
-                    droppedFiles.forEach(file => dataTransfer.items.add(file));
-                    input.files = dataTransfer.files; // Attribue les fichiers glissés à l'input
-                    input.dispatchEvent(new Event('change')); // Déclenche l'événement change manuellement
-                });
-            }
-        });
+                    Array.from(event.target.files).forEach(file => {
+                        // Check file count before adding
+                        if (previewContainer.children.length >= maxFiles) {
+                            alert(`Vous ne pouvez pas télécharger plus de ${maxFiles} images pour cette catégorie.`);
+                            return;
+                        }
 
-        function renderPreviews(category, previewContainer) {
-            previewContainer.innerHTML = ''; // Efface tous les aperçus actuels
-            
-            if (allUploadedFiles[category].length === 0) {
-                previewContainer.innerHTML = 'Aucune image sélectionnée.';
-                return;
-            }
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                const imgItem = document.createElement('div');
+                                imgItem.classList.add('image-preview-item');
 
-            allUploadedFiles[category].forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const imgDiv = document.createElement('div');
-                    imgDiv.className = 'image-preview-item';
-                    imgDiv.innerHTML = `
-                        <img src="${e.target.result}" alt="Preview">
-                        <button type="button" class="delete-image-btn" data-index="${index}" data-category="${category}">&times;</button>
-                    `;
-                    previewContainer.appendChild(imgDiv);
+                                const img = document.createElement('img');
+                                img.src = e.target.result;
+                                img.alt = file.name;
 
-                    // Écouteur pour le bouton de suppression
-                    imgDiv.querySelector('.delete-image-btn').addEventListener('click', (event) => {
-                        const fileIndex = parseInt(event.target.dataset.index);
-                        const fileCategory = event.target.dataset.category;
+                                const deleteBtn = document.createElement('button');
+                                deleteBtn.classList.add('delete-image-btn');
+                                deleteBtn.innerHTML = '&times;';
+                                deleteBtn.title = 'Supprimer l\'image';
+                                deleteBtn.onclick = function() {
+                                    imgItem.remove();
+                                };
 
-                        // Supprime le fichier du tableau
-                        allUploadedFiles[fileCategory].splice(fileIndex, 1);
-                        
-                        // Ré-affiche les aperçus pour mettre à jour les index et les visuels
-                        renderPreviews(fileCategory, document.getElementById(fileCategory.toLowerCase() + '-preview'));
+                                imgItem.appendChild(img);
+                                imgItem.appendChild(deleteBtn);
+                                previewContainer.appendChild(imgItem);
+                            };
+                            reader.readAsDataURL(file);
+                        }
                     });
-                };
-                reader.readAsDataURL(file); // Lit le fichier comme une URL de données pour l'aperçu
-            });
-        }
-
-        // PDF Generation Logic (using jspdf)
-        document.getElementById('generatePdfBtn').addEventListener('click', async () => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            // Collect form data
-            const vin = document.getElementById('vin').value || 'N/A';
-            const marque = document.getElementById('marque').value || 'N/A';
-            const modele = document.getElementById('modele').value || 'N/A';
-            const annee = document.getElementById('annee').value || 'N/A';
-            const kilometrage = document.getElementById('kilometrage').value || 'N/A';
-            const transmission = document.getElementById('transmission').value || 'N/A';
-            const carburant = document.getElementById('carburant').value || 'N/A';
-            const etatRadio = document.querySelector('input[name="etat"]:checked');
-            const etat = etatRadio ? etatRadio.value : 'N/A';
-
-            // Contact Info
-            const nom = document.getElementById('nom').value || 'N/A';
-            const courriel = document.getElementById('courriel').value || 'N/A';
-            const telephone = document.getElementById('telephone').value || 'N/A';
-            const ville = document.getElementById('ville').value || 'N/A'; 
-
-            let yPos = 10; // Y position for text
-            const margin = 10;
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const pageHeight = doc.internal.pageSize.getHeight();
-            const imgWidth = 80; // Largeur des images dans le PDF
-            const imgHeight = 60; // Hauteur des images dans le PDF
-            const imgMargin = 5; // Marge entre les images
-
-            doc.setFontSize(18);
-            doc.text("Rapport d'Évaluation Véhicule", margin, yPos);
-            yPos += 10;
-            doc.setFontSize(12);
-            doc.text("Généré le: " + new Date().toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' }) + " à " + new Date().toLocaleTimeString('fr-CA'), margin, yPos);
-            yPos += 20;
-
-            doc.setFontSize(14);
-            doc.text("Informations du Véhicule:", margin, yPos);
-            yPos += 7;
-            doc.setFontSize(12);
-            doc.text(`VIN: ${vin}`, margin + 5, yPos); yPos += 7;
-            doc.text(`Marque: ${marque}`, margin + 5, yPos); yPos += 7;
-            doc.text(`Modèle: ${modele}`, margin + 5, yPos); yPos += 7;
-            doc.text(`Année: ${annee}`, margin + 5, yPos); yPos += 7;
-            doc.text(`Kilométrage: ${kilometrage} km`, margin + 5, yPos); yPos += 7;
-            doc.text(`Transmission: ${transmission}`, margin + 5, yPos); yPos += 7;
-            doc.text(`Carburant: ${carburant}`, margin + 5, yPos); yPos += 7;
-            doc.text(`État Général: ${etat}`, margin + 5, yPos); yPos += 15;
-
-            doc.setFontSize(14);
-            doc.text("Coordonnées du Propriétaire:", margin, yPos);
-            yPos += 7;
-            doc.setFontSize(12);
-            doc.text(`Nom: ${nom}`, margin + 5, yPos); yPos += 7;
-            doc.text(`Courriel: ${courriel}`, margin + 5, yPos); yPos += 7;
-            doc.text(`Téléphone: ${telephone}`, margin + 5, yPos); yPos += 7;
-            doc.text(`Ville: ${ville}`, margin + 5, yPos); yPos += 15;
-
-            doc.setFontSize(14);
-            doc.text("Photos Téléversées:", margin, yPos);
-            yPos += 7;
-            doc.setFontSize(12);
-
-            // Function to convert File to DataURL
-            const fileToDataURL = (file) => {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
+                    this.value = ''; // Clear the input so same file can be selected again
                 });
-            };
+            });
 
-            for (const category in allUploadedFiles) {
-                if (allUploadedFiles[category].length > 0) {
-                    doc.text(`- Catégorie: ${category}`, margin + 5, yPos);
-                    yPos += 7;
+            // Handle drag and drop
+            document.querySelectorAll('.upload-label').forEach(label => {
+                label.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    label.style.borderColor = 'var(--secondary)';
+                });
 
-                    let currentX = margin + 10;
-                    for (const file of allUploadedFiles[category]) {
-                        // Check if there's enough space for the image + next image
-                        if (currentX + imgWidth + imgMargin > pageWidth - margin) {
-                            currentX = margin + 10; // Reset X for new row
-                            yPos += imgHeight + imgMargin; // Move down for new row
-                        }
+                label.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    label.style.borderColor = '#ccc';
+                });
 
-                        // Check for new page if not enough vertical space
-                        if (yPos + imgHeight + margin > pageHeight) {
-                            doc.addPage();
-                            yPos = margin; // Reset Y for new page
-                            currentX = margin + 10; // Reset X for new page
-                            doc.setFontSize(14);
-                            doc.text(`Photos Téléversées (suite):`, margin, yPos);
-                            yPos += 7;
-                            doc.setFontSize(12);
-                            doc.text(`- Catégorie: ${category} (suite)`, margin + 5, yPos);
-                            yPos += 7;
-                        }
+                label.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    label.style.borderColor = '#ccc';
+                    const inputId = label.getAttribute('for');
+                    const fileInput = document.getElementById(inputId);
+                    fileInput.files = e.dataTransfer.files; // Assign dropped files to the input
+                    const changeEvent = new Event('change', { bubbles: true });
+                    fileInput.dispatchEvent(changeEvent); // Manually trigger change event
+                });
+            });
 
-                        try {
-                            const dataURL = await fileToDataURL(file);
-                            doc.addImage(dataURL, file.type.split('/')[1].toUpperCase(), currentX, yPos, imgWidth, imgHeight);
-                            currentX += imgWidth + imgMargin;
-                        } catch (error) {
-                            console.error(`Erreur lors de l'ajout de l'image ${file.name}:`, error);
-                            doc.text(`[Image ${file.name} non chargée]`, currentX, yPos + imgHeight / 2); // Placeholder text
-                            currentX += imgWidth + imgMargin;
-                        }
-                    }
-                    yPos += imgHeight + imgMargin; // Move Y after last row of images for this category
-                    if (yPos > pageHeight - margin) { // Check if new page needed after category
-                        doc.addPage();
-                        yPos = margin;
-                    }
+            // --- Form submission handler (example - you'll connect this to your backend) ---
+            const evaluationForm = document.getElementById('evaluationForm');
+            evaluationForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent default form submission
+
+                alert('Formulaire soumis ! (Ceci est un exemple, vous devez implémenter la logique d\'envoi au serveur)');
+
+                // Ici, vous collecteriez toutes les données du formulaire
+                // et les enverriez à votre serveur (par exemple, via fetch API)
+                const formData = new FormData(evaluationForm);
+                const data = Object.fromEntries(formData.entries());
+
+                // Pour les radios, assurez-vous de récupérer la valeur sélectionnée
+                const selectedEtat = document.querySelector('input[name="etat"]:checked');
+                if (selectedEtat) {
+                    data.etat = selectedEtat.value;
                 }
-            }
 
-            doc.save('Evaluation_Vehicule.pdf');
+                // Ajoutez les photos (nécessitera un traitement plus complexe côté serveur)
+                // Pour l'exemple, nous ne les envoyons pas directement comme objets File
+                // car cela nécessite un multipart/form-data ou une conversion en Base64
+                // data.photosExterieur = Array.from(document.getElementById('photoExterieur').files);
+                // data.photosInterieur = Array.from(document.getElementById('photoInterieur').files);
+                // data.photosDommages = Array.from(document.getElementById('photoDommages').files);
+
+                console.log('Données du formulaire à envoyer:', data);
+
+                // Exemple d'envoi avec Fetch (décommenter et adapter)
+                /*
+                fetch('/api/submit-evaluation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    console.log('Succès:', result);
+                    // Gérer la redirection ou le message de succès
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la soumission:', error);
+                    // Gérer l'erreur
+                });
+                */
+            });
+
         });
-
-        // Form submission (placeholder)
-        document.getElementById('evaluationForm').addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent default form submission
-
-            // Here you would collect all form data (including photos)
-            // and send it to your server using Fetch API or XMLHttpRequest.
-            //
-            // POUR ENVOOYER LES PHOTOS AU SERVEUR :
-            // Vous devrez créer un objet FormData et y ajouter les fichiers du tableau 'allUploadedFiles'.
-            // const formData = new FormData(this); // Ceci prendra les autres champs du formulaire
-            // for (const category in allUploadedFiles) {
-            //     allUploadedFiles[category].forEach((file, index) => {
-            //         formData.append(`${category}_photo_${index}`, file); // Nommez vos fichiers de manière unique
-            //     });
-            // }
-            //
-            // Exemple d'envoi (nécessite un backend pour recevoir ces données):
-            // fetch('/submit-evaluation', {
-            //     method: 'POST',
-            //     body: formData
-            // })
-            // .then(response => response.json())
-            // .then(data => {
-            //     alert('Formulaire soumis avec succès!');
-            //     console.log(data);
-            //     // Handle success (e.g., redirect to a confirmation page)
-            // })
-            // .catch(error => {
-            //     console.error('Erreur lors de la soumission:', error);
-            //     alert('Une erreur est survenue lors de la soumission du formulaire.');
-            // });
-
-            alert('Formulaire soumis (logique de soumission réelle non implémentée). Le PDF a été généré.');
-
-            // You might call the PDF generation here if it's part of the submission flow
-            // document.getElementById('generatePdfBtn').click();
-        });
-
     </script>
 </body>
 </html>
